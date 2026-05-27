@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:revive_eco_tech_app/Add_Address.dart'; // Import AddAddress page
+import 'package:revive_eco_tech_app/Add_Address.dart'; // Ensure filename matches your project
 
-// ==== Constants (from your theme) ====
+// ==== Constants ====
 const kPrimaryColor = Color(0xFF013D5A);
 const kCreamColor = Color(0xFFFCF3E3);
+const kAccentColor = Color(0xFFA6CB4E);
 
 class ManageAddressesPage extends StatefulWidget {
   const ManageAddressesPage({super.key});
@@ -17,28 +18,31 @@ class ManageAddressesPage extends StatefulWidget {
 class _ManageAddressesPageState extends State<ManageAddressesPage> {
   final User? user = FirebaseAuth.instance.currentUser;
 
-  // Function to show a confirmation dialog before deleting
+  // ✅ CEVUS: Themed Confirmation Dialog
   Future<void> _confirmDelete(BuildContext context, String docId) async {
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Address?'),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Delete Address?', style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
           content: const Text(
-              'Are you sure you want to delete this address? This action cannot be undone.'),
+            'Are you sure you want to delete this address? This action cannot be undone.',
+            style: TextStyle(color: Colors.black87),
+          ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(false),
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () => Navigator.of(context).pop(true),
             ),
           ],
         );
@@ -50,10 +54,8 @@ class _ManageAddressesPageState extends State<ManageAddressesPage> {
     }
   }
 
-  // Function to delete the address from Firestore
   Future<void> _deleteAddress(String docId) async {
     if (user == null) return;
-
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -64,51 +66,78 @@ class _ManageAddressesPageState extends State<ManageAddressesPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Address deleted successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Address deleted successfully'),
+            backgroundColor: kPrimaryColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(20),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete address: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
         );
       }
     }
+  }
+
+  void _navigateToAddAddress({DocumentSnapshot? existingAddress}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddAddress(existingAddress: existingAddress),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kCreamColor,
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text(
-          'Manage Addresses',
-          style: TextStyle(
-            fontFamily: 'RedHatDisplay',
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            letterSpacing: 1.0,
-            color: kCreamColor,
+      // ✅ CEVUS: Consistent Curved AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: AppBar(
+          centerTitle: true,
+          toolbarHeight: 70,
+          title: const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              'Manage Addresses',
+              style: TextStyle(
+                fontFamily: 'RedHatDisplay',
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                letterSpacing: 1.0,
+                color: kCreamColor,
+              ),
+            ),
           ),
-        ),
-        backgroundColor: kPrimaryColor,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
+          backgroundColor: kPrimaryColor,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+          ),
         ),
       ),
+
+      // ✅ CEVUS: Quick Add FAB
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: kAccentColor,
+        onPressed: () => _navigateToAddAddress(),
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
+      ),
+
       body: user == null
           ? const Center(child: Text('You are not logged in.'))
           : StreamBuilder<QuerySnapshot>(
@@ -120,7 +149,7 @@ class _ManageAddressesPageState extends State<ManageAddressesPage> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
           if (snapshot.hasError) {
             return const Center(child: Text('Something went wrong.'));
@@ -130,13 +159,31 @@ class _ManageAddressesPageState extends State<ManageAddressesPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.location_off_outlined,
-                      size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'You have no saved addresses.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
+                    ),
+                    child: const Icon(Icons.location_off_outlined, size: 60, color: Colors.grey),
                   ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No saved addresses yet.',
+                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () => _navigateToAddAddress(),
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add New Address"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  )
                 ],
               ),
             );
@@ -145,90 +192,79 @@ class _ManageAddressesPageState extends State<ManageAddressesPage> {
           final addresses = snapshot.data!.docs;
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Extra padding for FAB
             itemCount: addresses.length,
             itemBuilder: (context, index) {
               final doc = addresses[index];
               final data = doc.data() as Map<String, dynamic>;
+              String type = data['addressType'] ?? 'Home';
 
-              return Card(
-                color: Colors.white,
-                elevation: 3,
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              IconData typeIcon = Icons.location_on_outlined;
+              if (type == 'Home') typeIcon = Icons.home_rounded;
+              else if (type == 'Office') typeIcon = Icons.work_rounded;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3)),
+                  ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-                  child: Row(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icon based on addressType
-                      Icon(
-                        data['addressType'] == 'Home'
-                            ? Icons.home_outlined
-                            : data['addressType'] == 'Office'
-                            ? Icons.work_outline
-                            : Icons.location_on_outlined,
-                        color: kPrimaryColor,
-                        size: 30,
+                      // Header Row: Icon + Type + Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: kPrimaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(typeIcon, color: kPrimaryColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                type,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryColor),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                                onPressed: () => _navigateToAddAddress(existingAddress: doc),
+                                tooltip: "Edit",
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.redAccent),
+                                onPressed: () => _confirmDelete(context, doc.id),
+                                tooltip: "Delete",
+                              ),
+                            ],
+                          )
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      // Address details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['addressType'] ?? 'Address',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: kPrimaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              data['line1'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              data['fullAddress'] ?? '',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const Divider(height: 24, thickness: 0.5),
+
+                      // Address Body
+                      Text(
+                        data['line1'] ?? '',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
-                      // Edit Button
-                      IconButton(
-                        icon:
-                        Icon(Icons.edit_outlined, color: kPrimaryColor),
-                        onPressed: () {
-                          // Navigate to AddAddress page and pass the
-                          // existing address document to pre-fill the form
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddAddress(
-                                existingAddress: doc,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      // Delete Button
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.red),
-                        onPressed: () {
-                          _confirmDelete(context, doc.id);
-                        },
+                      const SizedBox(height: 4),
+                      Text(
+                        data['fullAddress'] ?? '',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
                       ),
                     ],
                   ),

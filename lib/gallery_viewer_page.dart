@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // ✅ 1. Import for Provider
 
 class GalleryViewerPage extends StatefulWidget {
   final List<String> imageUrls;
@@ -42,60 +43,98 @@ class _GalleryViewerPageState extends State<GalleryViewerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // We use a black background for a better gallery feel
       backgroundColor: Colors.black,
       body: Stack(
         alignment: Alignment.bottomRight,
         children: [
-          // --- The Main Swipable Gallery ---
+          // --- Main Gallery ---
           PhotoViewGallery.builder(
+            scrollPhysics: const BouncingScrollPhysics(),
             pageController: _pageController,
             itemCount: widget.imageUrls.length,
             onPageChanged: onPageChanged,
             builder: (context, index) {
               final imageUrl = widget.imageUrls[index];
+
+              // ✅ FIX: Use CachedNetworkImageProvider
+              // This shares the exact same disk cache as the previous page.
+              ImageProvider imageProvider;
+              if (imageUrl.startsWith('http')) {
+                imageProvider = CachedNetworkImageProvider(imageUrl);
+              } else {
+                imageProvider = AssetImage(imageUrl);
+              }
+
               return PhotoViewGalleryPageOptions(
-                imageProvider: AssetImage(imageUrl),
-                // This enables the zoom
+                imageProvider: imageProvider,
+                initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained,
-                maxScale: PhotoViewComputedScale.covered * 2,
-                // This connects the Hero animation
+                maxScale: PhotoViewComputedScale.covered * 2.5,
+                // Hero Tag must match the previous page exactly
                 heroAttributes: PhotoViewHeroAttributes(tag: imageUrl),
+                // Better error handling
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image_rounded, color: Colors.grey, size: 50),
+                      SizedBox(height: 10),
+                      Text("Image failed to load", style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ),
               );
             },
-            // Show a loading spinner while images load
-            loadingBuilder: (context, event) => const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+            // Loading Spinner
+            loadingBuilder: (context, event) => Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                value: event == null
+                    ? null
+                    : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
+              ),
             ),
+            backgroundDecoration: const BoxDecoration(color: Colors.black),
           ),
 
           // --- Close Button (Top Left) ---
           Positioned(
-            top: 40,
-            left: 16,
-            child: SafeArea(
-              child: CircleAvatar(
-                backgroundColor: Colors.black.withOpacity(0.5),
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+            top: 50, // Adjusted for modern notch areas
+            left: 20,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
               ),
             ),
           ),
 
-          // --- Image Counter (Bottom Center) ---
+          // --- Image Counter Badge (Bottom Center) ---
           Positioned(
-            bottom: 20,
+            bottom: 40,
             left: 0,
             right: 0,
             child: Center(
-              child: Text(
-                '${_currentIndex + 1} / ${widget.imageUrls.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  shadows: [Shadow(blurRadius: 4)],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Text(
+                  '${_currentIndex + 1} / ${widget.imageUrls.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ),
             ),

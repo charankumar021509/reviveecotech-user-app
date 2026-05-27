@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"reviveecotech-dfbed","appId":"1:967064516173:android:c73c8d69216b1b947b0e04","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"reviveecotech-dfbed","configurations":{"android":"1:967064516173:android:c73c8d69216b1b947b0e04","ios":"1:967064516173:ios:7152e130a9c0b6a77b0e04","macos":"1:967064516173:ios:7152e130a9c0b6a77b0e04","web":"1:967064516173:web:b0f172c527d31d537b0e04","windows":"1:967064516173:web:4ade2ac6759111347b0e04"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "reviveecotech-dfbed",
+          "appId": "1:967064516173:android:c73c8d69216b1b947b0e04",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "reviveecotech-dfbed",
+          "configurations": {
+            "android": "1:967064516173:android:c73c8d69216b1b947b0e04",
+            "ios": "1:967064516173:ios:7152e130a9c0b6a77b0e04",
+            "macos": "1:967064516173:ios:7152e130a9c0b6a77b0e04",
+            "web": "1:967064516173:web:b0f172c527d31d537b0e04",
+            "windows": "1:967064516173:web:4ade2ac6759111347b0e04"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

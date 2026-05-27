@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 
 class FirebaseServices {
   final FirebaseAuth auth = FirebaseAuth.instance;
+  // ✅ Kept your original instance
   final GoogleSignIn googleSignIn = GoogleSignIn.instance;
   bool _isGoogleInitialized = false;
 
+  // ✅ Kept your original initialization logic
   Future<void> _initializeGoogleSignIn() async {
     try {
       await googleSignIn.initialize();
@@ -16,14 +18,14 @@ class FirebaseServices {
     }
   }
 
-  // Google Sign-In
+  // ✅ Kept your original Google Sign-In logic
   Future<UserCredential?> signInWithGoogle() async {
     if (!_isGoogleInitialized) {
       await _initializeGoogleSignIn();
     }
     try {
-      final GoogleSignInAccount? googleUser =
-      await googleSignIn.authenticate();
+      // Using 'authenticate()' as per your working version
+      final GoogleSignInAccount? googleUser = await googleSignIn.authenticate();
 
       if (googleUser == null) {
         debugPrint('Sign-in aborted by user');
@@ -54,23 +56,7 @@ class FirebaseServices {
     }
   }
 
-  // Email/Password Signup
-  // Future<UserCredential?> signUpWithEmail(String email, String password) async {
-  //   try {
-  //     final userCredential = await auth.createUserWithEmailAndPassword(
-  //       email: email,
-  //       password: password,
-  //     );
-  //     debugPrint('User signed up with email.');
-  //     return userCredential;
-  //   } on FirebaseAuthException catch (e) {
-  //     debugPrint('FirebaseAuthException: ${e.message}');
-  //     return null;
-  //   } catch (e) {
-  //     debugPrint('Error during Email Sign-Up: $e');
-  //     return null;
-  //   }
-  // }
+  // ✅ UPGRADED: Improved Sign-Up Error Handling
   Future<String?> signUpWithEmail(String email, String password) async {
     try {
       final userCredential = await auth.createUserWithEmailAndPassword(
@@ -90,15 +76,15 @@ class FirebaseServices {
         case 'weak-password':
           return "Password is too weak.";
         default:
-          return "Something went wrong. Please try again.";
+          return e.message ?? "Something went wrong. Please try again.";
       }
     } catch (e) {
       return "Unexpected error. Please try again later.";
     }
   }
 
-
-  // Email/Password Login
+  // ✅ UPGRADED: Improved Login Error Handling
+  // Now throws exceptions so the UI can show the Red SnackBar
   Future<UserCredential?> loginWithEmail(String email, String password) async {
     try {
       final userCredential = await auth.signInWithEmailAndPassword(
@@ -109,14 +95,15 @@ class FirebaseServices {
       return userCredential;
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException: ${e.message}');
-      return null;
+      // Throw the error message to the UI
+      throw e.message ?? "Login failed";
     } catch (e) {
       debugPrint('Error during Email Login: $e');
-      return null;
+      throw "An unexpected error occurred.";
     }
   }
 
-  // Sign out (Google or Email)
+  // ✅ Kept your original Sign Out logic
   Future<void> signOut() async {
     try {
       await auth.signOut();

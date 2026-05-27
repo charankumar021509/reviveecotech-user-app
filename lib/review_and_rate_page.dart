@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ✅ Import Firebase Auth
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Import Firestore
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Constants (assuming from your theme)
+// Constants
 const kPrimaryColor = Color(0xFF013D5A);
 const kCreamColor = Color(0xFFFCF3E3);
-const kAccentColor = Color(0xFFA6CB4E); // Button color
-
+const kAccentColor = Color(0xFFA6CB4E);
 
 class ReviewAndRatePage extends StatefulWidget {
+  const ReviewAndRatePage({super.key});
+
   @override
-  _ReviewAndRatePageState createState() => _ReviewAndRatePageState();
+  State<ReviewAndRatePage> createState() => _ReviewAndRatePageState();
 }
 
 class _ReviewAndRatePageState extends State<ReviewAndRatePage> {
-  double _rating = 3.0; // Start with a default
+  double _rating = 5.0; // Start with 5 stars for positive bias
   final TextEditingController _commentController = TextEditingController();
-  bool _isSubmitting = false; // ✅ State for loading indicator
+  bool _isSubmitting = false;
+
+  // Dynamic feedback based on rating
+  String get _ratingLabel {
+    if (_rating >= 5) return "Excellent! 😍";
+    if (_rating >= 4) return "Good 😊";
+    if (_rating >= 3) return "Average 😐";
+    if (_rating >= 2) return "Poor 😞";
+    return "Terrible 😡";
+  }
 
   @override
   void dispose() {
@@ -25,202 +35,195 @@ class _ReviewAndRatePageState extends State<ReviewAndRatePage> {
     super.dispose();
   }
 
-  // ✅ Function to handle submission to Firestore
   Future<void> _submitReview() async {
     final user = FirebaseAuth.instance.currentUser;
 
-    // --- Validations ---
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("You must be logged in to submit a review."), backgroundColor: Colors.red),
+        const SnackBar(content: Text("You must be logged in."), backgroundColor: Colors.red),
       );
       return;
     }
-    // Optional: Add validation for comment length if desired
-    // if (_commentController.text.trim().isEmpty) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text("Please enter a comment."), backgroundColor: Colors.orange),
-    //   );
-    //   return;
-    // }
 
-    setState(() => _isSubmitting = true); // Show loading indicator
+    setState(() => _isSubmitting = true);
 
     try {
-      // --- Prepare Data ---
       final reviewData = {
         'userId': user.uid,
-        'userName': user.displayName ?? "Anonymous", // Get name if available
+        'userName': user.displayName ?? "Anonymous",
         'rating': _rating,
-        'comment': _commentController.text.trim(), // Trim whitespace
-        'createdAt': FieldValue.serverTimestamp(), // Use server time
+        'comment': _commentController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'appVersion': '1.0.0', // Useful for tracking analytics
       };
 
-      // --- Save to Firestore ---
       await FirebaseFirestore.instance.collection('reviews').add(reviewData);
 
-      // --- Success Feedback ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Thank you for your review!"), backgroundColor: kAccentColor), // Use accent color
+          const SnackBar(
+            content: Text("Thank you for your feedback!"),
+            backgroundColor: kPrimaryColor,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-        // Optional: Navigate back after successful submission
-        Navigator.pop(context);
+        Navigator.pop(context); // Auto-close page
       }
-
     } catch (e) {
-      // --- Error Feedback ---
-      print("Error submitting review: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to submit review. Please try again."), backgroundColor: Colors.red),
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
         );
       }
     } finally {
-      // --- Hide Loading Indicator ---
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kCreamColor, // Use constant
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text(
-          "Review & Rate",
-          style: TextStyle(
-            fontFamily: 'RedHatDisplay',
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            letterSpacing: 1.0,
-            color: kCreamColor, // Use constant
+      backgroundColor: kCreamColor,
+      // ✅ CEVUS: Consistent Curved AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: AppBar(
+          centerTitle: true,
+          toolbarHeight: 70,
+          title: const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              "Review & Rate",
+              style: TextStyle(
+                fontFamily: 'RedHatDisplay',
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                letterSpacing: 1.0,
+                color: kCreamColor,
+              ),
+            ),
+          ),
+          backgroundColor: kPrimaryColor,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
           ),
         ),
-        backgroundColor: kPrimaryColor, // Use constant
-        leading: IconButton(
-          // Use standard back icon for consistency
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        elevation: 0,
       ),
-      body: SingleChildScrollView( // ✅ Wrap in SingleChildScrollView
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20), // Increased vertical padding
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 🖼 Asset image
-            Image.asset('assets/images/review.png', height: 180), // Slightly smaller image
-
-            const SizedBox(height: 25),
-
-            const Text(
-              'Share Your Experience', // More engaging text
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: kPrimaryColor), // Use primary color
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'How would you rate our service?', // Added subtext
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-
-
-            const SizedBox(height: 20),
-
-            // ⭐ Rating Bar
-            RatingBar.builder(
-              initialRating: _rating,
-              minRating: 1,
-              direction: Axis.horizontal,
-              allowHalfRating: false, // Keep as whole stars
-              itemCount: 5,
-              itemPadding: const EdgeInsets.symmetric(horizontal: 6.0), // Slightly more padding
-              itemBuilder: (context, _) => const Icon(
-                  Icons.star_rounded, // Rounded star icon
-                  color: kAccentColor // Use accent color
+            // 🖼 Image Placeholder or Asset
+            // Using a Container/Icon fallback in case asset is missing, but kept your asset line
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/review.png'), // Ensure this exists
+                  fit: BoxFit.contain,
+                ),
+                // Fallback icon if image fails to load or during dev
+                color: Colors.transparent,
               ),
-              onRatingUpdate: (rating) {
-                setState(() {
-                  _rating = rating;
-                });
-              },
-              glowColor: kAccentColor.withOpacity(0.5), // Add glow effect
-            ),
-
-            const SizedBox(height: 25),
-
-            // 📝 Comment Box
-            TextField(
-              controller: _commentController,
-              maxLines: 4, // Allow slightly more lines
-              decoration: InputDecoration(
-                hintText: 'Tell us more about your experience (optional)',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12), // Consistent border radius
-                  borderSide: BorderSide(color: Colors.grey.shade300), // Subtle border
-                ),
-                enabledBorder: OutlineInputBorder( // Border when not focused
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder( // Border when focused
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: kPrimaryColor, width: 1.5), // Use primary color on focus
-                ),
+              child: Image.asset('assets/images/review.png',
+                errorBuilder: (c, o, s) => const Icon(Icons.rate_review_rounded, size: 100, color: Colors.grey),
               ),
-              textCapitalization: TextCapitalization.sentences, // Capitalize sentences
             ),
 
             const SizedBox(height: 30),
 
-            // ✅ Submit Button with Loading Indicator
-            ElevatedButton(
-              // Disable button while submitting
-              onPressed: _isSubmitting ? null : _submitReview,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kAccentColor, // Use constant
-                foregroundColor: kPrimaryColor, // Darker text on light button
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                minimumSize: const Size(double.infinity, 50),
-                elevation: 3, // Add subtle elevation
+            Text(
+              _ratingLabel, // ✅ Dynamic Label
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 26,
+                color: kPrimaryColor,
+                fontFamily: 'RedHatDisplay',
               ),
-              child: _isSubmitting // Show indicator or text
-                  ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'Your opinion matters to us!',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+
+            const SizedBox(height: 25),
+
+            // ⭐ Rating Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: RatingBar.builder(
+                initialRating: _rating,
+                minRating: 1,
+                direction: Axis.horizontal,
+                allowHalfRating: true,
+                itemCount: 5,
+                itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                itemBuilder: (context, _) => const Icon(Icons.star_rounded, color: Colors.amber),
+                onRatingUpdate: (rating) => setState(() => _rating = rating),
+                glow: false,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // 📝 Comment Box
+            TextField(
+              controller: _commentController,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: 'Tell us more about your experience...',
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.all(20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: kPrimaryColor, width: 2)),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // ✅ Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitReview,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kAccentColor,
+                  foregroundColor: kPrimaryColor,
+                  elevation: 5,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-              )
-                  : const Text(
-                "Submit Review",
-                style: TextStyle(
-                  // color: kPrimaryColor, // Set via foregroundColor
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16, // Standard button text size
+                child: _isSubmitting
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: kPrimaryColor))
+                    : const Text(
+                  "Submit Review",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
-            const SizedBox(height: 20), // Add space at the bottom
           ],
         ),
       ),
     );
   }
 }
-

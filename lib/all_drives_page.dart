@@ -5,7 +5,7 @@ import 'package:revive_eco_tech_app/widgets/drive_card.dart'; // Re-use the card
 import 'package:revive_eco_tech_app/drive_details_page.dart';
 import 'package:revive_eco_tech_app/society_campaign_page.dart';
 
-// --- Constants (copied from home.dart) ---
+// --- Constants ---
 const kPrimaryColor = Color(0xFF013856);
 const kAccentColor = Color(0xFFa7cd47);
 const kCreamColor = Color(0xFFfcf3e2);
@@ -26,14 +26,40 @@ class AllDrivesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kCreamColor,
-      appBar: AppBar(
-        title: const Text(
-          "Upcoming Drives",
-          style: TextStyle(color: kCreamColor, fontWeight: FontWeight.bold),
+      // ✅ 1. CEVUS: Consistent Curved Header
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: AppBar(
+          centerTitle: true,
+          toolbarHeight: 70,
+          title: const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              "Upcoming Drives",
+              style: TextStyle(
+                fontFamily: 'RedHatDisplay',
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                letterSpacing: 1.0,
+                color: kCreamColor,
+              ),
+            ),
+          ),
+          backgroundColor: kPrimaryColor,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+          ),
         ),
-        backgroundColor: kPrimaryColor,
-        iconTheme: const IconThemeData(color: kCreamColor),
       ),
+
       body: StreamBuilder<QuerySnapshot>(
         // Query Firestore for all drives from today onwards
         stream: FirebaseFirestore.instance
@@ -44,13 +70,21 @@ class AllDrivesPage extends StatelessWidget {
         builder: (context, snapshot) {
           // --- Loading State ---
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
 
           // --- Error State ---
           if (snapshot.hasError) {
-            return const Center(
-                child: Text("Could not load drives. Please try again later."));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text("Could not load drives.\n${snapshot.error}", textAlign: TextAlign.center),
+                ],
+              ),
+            );
           }
 
           final driveDocs = snapshot.data!.docs;
@@ -61,17 +95,17 @@ class AllDrivesPage extends StatelessWidget {
           }
 
           // --- Data State ---
-          final drives =
-          driveDocs.map((doc) => Drive.fromFirestore(doc)).toList();
+          final drives = driveDocs.map((doc) => Drive.fromFirestore(doc)).toList();
 
-          // We use a GridView here instead of a ListView
           return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 2 cards per row
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: (200 / 220), // Aspect ratio from our DriveCard
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+            physics: const BouncingScrollPhysics(),
+            // ✅ 2. CEVUS: Responsive Grid Layout
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 220, // Cards won't get wider than this
+              childAspectRatio: 0.8, // Taller cards for better image display
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
             itemCount: drives.length,
             itemBuilder: (context, index) {
@@ -87,56 +121,64 @@ class AllDrivesPage extends StatelessWidget {
     );
   }
 
-  // Your requested empty state with a link to Society Campaign
+  // ✅ 3. CEVUS: Polished Empty State with CTA
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.event_busy, size: 80, color: Colors.grey),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
+              child: const Icon(Icons.event_busy_rounded, size: 60, color: Colors.grey),
+            ),
             const SizedBox(height: 24),
             const Text(
-              "No Drives Scheduled Yet",
+              "No Upcoming Drives",
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: kPrimaryColor,
+                fontFamily: 'RedHatDisplay',
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
-              "Check back soon for events in your area, or start your own!",
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              "Check back soon for events in your area, or take the initiative!",
+              style: TextStyle(fontSize: 16, color: Colors.grey[600], height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.campaign, color: kPrimaryColor),
-              label: const Text(
-                "Start a Society Campaign",
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: kPrimaryColor),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kAccentColor,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+
+            // Call To Action Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.volunteer_activism, color: kPrimaryColor),
+                label: const Text(
+                  "Start a Society Campaign",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryColor),
                 ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kAccentColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SocietyCampaignPage()),
+                  );
+                },
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SocietyCampaignPage()),
-                );
-              },
             )
           ],
         ),

@@ -52,7 +52,7 @@ class PendingPickupCard extends StatelessWidget {
     String imagePath = 'assets/images/home/scraps/metal.png'; // Default image
     if (itemsList.isNotEmpty) {
       String firstItem = itemsList.first.toString().toLowerCase();
-      if (firstItem.contains('paper')) imagePath = 'assets/images/home/scraps/newspaper.png';
+      if (firstItem.contains('paper')) imagePath = 'assets/images/home/scraps/newspaper.jpg';
       else if (firstItem.contains('plastic')) imagePath = 'assets/images/home/scraps/bottle.png';
       else if (firstItem.contains('glass')) imagePath = 'assets/images/home/scraps/bottle.png'; // Add specific icon if available
       else if (firstItem.contains('e-waste')) imagePath = 'assets/images/home/scraps/ewaste.png'; // Add specific icon if available

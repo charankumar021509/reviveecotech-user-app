@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'widgets/pickup_tracker.dart'; // Import the tracker widget
+
 import 'schedule_pickup.dart'; // IMPORT SchedulePickup
 
 // Constants from your theme
@@ -23,22 +23,27 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
 
   // Function to show confirmation before cancelling
   Future<void> _confirmCancellation(BuildContext context, DocumentReference pickupRef) async {
-    // ... (no changes here) ...
     bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Cancel Pickup?'),
-          content: const Text('Are you sure you want to cancel this pickup request?'),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Cancel Pickup?', style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
+          content: const Text('Are you sure you want to cancel this pickup request? This action cannot be undone.'),
           actions: <Widget>[
             TextButton(
-              child: const Text('No'),
+              child: const Text('No, Keep it', style: TextStyle(color: Colors.grey)),
               onPressed: () {
                 Navigator.of(context).pop(false);
               },
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade50,
+                foregroundColor: Colors.red,
+                elevation: 0,
+              ),
               child: const Text('Yes, Cancel'),
               onPressed: () {
                 Navigator.of(context).pop(true);
@@ -56,15 +61,17 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
 
   // Function to update status to Cancelled
   Future<void> _cancelPickup(DocumentReference pickupRef) async {
-    // ... (no changes here) ...
     setState(() => _isCancelling = true);
     try {
       await pickupRef.update({'status': 'Cancelled'});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pickup cancelled successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Pickup cancelled successfully'),
+            backgroundColor: kPrimaryColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(20),
           ),
         );
         Navigator.pop(context); // Go back after cancellation
@@ -84,32 +91,21 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
   }
 
   // Helper to map status string to tracker step integer
-  int _mapStatusToStep(String? status) {
-    // ... (no changes here) ...
-    switch (status) {
-      case 'Pending': return 1;
-      case 'Confirmed': return 2;
-      case 'Out-for-Pickup': return 3;
-      case 'Completed': return 4;
-      case 'Cancelled': return 0;
-      default: return 0;
-    }
-  }
+  
 
-  // ✅ 2. HELPER to check if editing is allowed (before cutoff time)
+  // Helper to check if editing is allowed (before cutoff time)
   bool _canEditPickup(DateTime? pickupDate, String? timeSlot) {
     if (pickupDate == null || timeSlot == null) return false;
 
     // Define the cutoff duration (e.g., 24 hours before)
     const Duration cutoffDuration = Duration(hours: 24);
 
-    // Parse the start hour from the time slot string (e.g., "09:00AM - 11:00AM")
     int startHour = 0;
     try {
       final timeOnly = timeSlot.split(' ')[0]; // Get "09:00" from "09:00AM"
       final hourMinute = timeOnly.split(':');
       startHour = int.parse(hourMinute[0]);
-      // Handle PM if necessary
+      // Handle PM
       if (timeSlot.toLowerCase().contains('pm') && startHour != 12) {
         startHour += 12;
       }
@@ -118,26 +114,69 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
         startHour = 0;
       }
     } catch (e) {
-      print("Error parsing time slot start hour '$timeSlot': $e");
-      return false; // Cannot determine cutoff if time slot is invalid
+      return false;
     }
 
-    // Combine date and start hour
     DateTime pickupStartTime;
     try {
       pickupStartTime = DateTime(pickupDate.year, pickupDate.month, pickupDate.day, startHour);
     } catch (e) {
-      print("Error creating pickup start time: $e");
-      return false; // Invalid date components
+      return false;
     }
 
-    // Calculate the cutoff time
     final DateTime cutoffTime = pickupStartTime.subtract(cutoffDuration);
-
-    // Check if current time is before the cutoff time
     return DateTime.now().isBefore(cutoffTime);
   }
 
+  // ✅ CEVUS Helper: Standard Section Builder
+  Widget _buildSection({required String title, required IconData icon, required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kCreamColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 20, color: kPrimaryColor),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: kPrimaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,13 +199,12 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
         ),
         backgroundColor: kPrimaryColor,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        // ✅ CEVUS: Premium Curve
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
         ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
@@ -184,17 +222,14 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final addressDetails = data['addressDetails'] as Map<String, dynamic>? ?? {};
-          // final scrapWeights = data['scrapWeights'] as Map<String, dynamic>? ?? {}; // Not used anymore here
           final pickupDate = (data['pickupDate'] as Timestamp?)?.toDate();
-          final timeSlot = data['pickupTimeSlot'] as String?; // Get time slot
+          final timeSlot = data['pickupTimeSlot'] as String?;
           final status = data['status'] as String? ?? 'Unknown';
 
-          // --- Determine State ---
           final bool isEditableStatus = ['Pending', 'Confirmed'].contains(status);
-          // ✅ 3. Calculate canEdit using helper
           final bool canEdit = isEditableStatus && _canEditPickup(pickupDate, timeSlot);
           final bool canCancel = ['Pending', 'Confirmed', 'Out-for-Pickup'].contains(status);
-          // ✅ 4. Check if Overdue
+
           bool isOverdue = false;
           if (pickupDate != null && ['Pending', 'Confirmed', 'Out-for-Pickup'].contains(status)) {
             final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
@@ -203,209 +238,476 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                // ✅ 5. Conditionally display Overdue Chip
+                // --- Overdue Alert ---
                 if(isOverdue)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 15.0),
-                    child: Chip(
-                      label: Text('Pickup Overdue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red.shade700,
-                      avatar: Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade700),
+                        const SizedBox(width: 10),
+                        const Text('Pickup is Overdue', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
 
-                // --- Status Tracker ---
-                Text("Status", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-                SizedBox(height: 10),
-                PickupTracker(
-                  currentStep: _mapStatusToStep(status),
-                  pickupDate: pickupDate,
-                ),
-                Divider(height: 30, thickness: 1),
-
-                // --- Pickup Address ---
-                Text("Pickup Address", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-                SizedBox(height: 8),
-                Text(addressDetails['addressType'] ?? 'N/A', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(addressDetails['line1'] ?? 'N/A'),
-                Text(addressDetails['fullAddress'] ?? 'N/A'),
-                Divider(height: 30, thickness: 1),
-
-                // --- Date & Time ---
-                Text("Date & Time", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-                SizedBox(height: 8),
-                Text("Date: ${pickupDate != null ? DateFormat('MMMM d, yyyy').format(pickupDate) : 'N/A'}"),
-                Text("Time Slot: ${timeSlot ?? 'N/A'}"), // Use timeSlot
-                Divider(height: 30, thickness: 1),
-
-                // --- Items & Estimated Value ---
-                Text("Items & Estimated Value", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-                SizedBox(height: 8),
-
-                Builder(builder: (context) {
-                  final scrapItemsRaw = data['scrapItems'];
-                  if (scrapItemsRaw == null || scrapItemsRaw is! List || scrapItemsRaw.isEmpty) {
-                    return Text("No items recorded.");
-                  }
-                  List<Widget> itemWidgets = [];
-                  for (var itemRaw in scrapItemsRaw) {
-                    if (itemRaw is Map<String, dynamic>) {
-                      final Map<String, dynamic> item = itemRaw;
-                      final String itemName = item['itemName'] ?? 'Unknown Item';
-                      final num amountNum = item['amount'] ?? 0;
-                      final String unit = item['unit'] ?? 'unit';
-                      final double itemCost = (item['calculatedCost'] as num?)?.toDouble() ?? 0.0;
-                      String displayAmount = (unit.toLowerCase() == 'kg')
-                          ? amountNum.toStringAsFixed(1)
-                          : amountNum.round().toString();
-
-                      // ✅ FIXED ROW:
-                      itemWidgets.add(
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start, // Handles text wrapping
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  "$itemName ($displayAmount $unit)",
-                                  style: TextStyle(fontSize: 15),
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                currencyFormatter.format(itemCost),
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                  return Column(children: itemWidgets);
-                }),
-
-                SizedBox(height: 10),
-                Divider(),
-                SizedBox(height: 10),
-
-                // ✅ 6. Display Total Estimated Weight
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        "Total Estimated Weight (kg):",
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)
-                    ),
-                    Text(
-                      // Read from the correct field name used in schedule_pickup
-                        "${(data['totalEstimatedWeight_kg'] as num?)?.toStringAsFixed(1) ?? '0.0'} kg",
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6), // Space between weight and value
-
-                // Display Total Estimated Value
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        "Total Estimated Value:",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16) // Make it bolder
-                    ),
-                    Text(
-                      // Read from the estimatedCost field
-                      currencyFormatter.format((data['estimatedCost'] as num?)?.toDouble() ?? 0.0),
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: kPrimaryColor // Use theme color for emphasis
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Show Final Weight/Amount if completed
-                if(status == 'Completed') ...[ /* ... Final Weight/Amount ... */ ],
-
-                Divider(height: 30, thickness: 1),
-
-                // --- Description ---
-                Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-                SizedBox(height: 8),
-                Text(data['description']?.isNotEmpty ?? false ? data['description'] : 'No description provided.'),
-                SizedBox(height: 40),
-
-
-                // --- Action Buttons ---
-                // ✅ 7. Use Row for Edit and Cancel buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Space out buttons
-                  children: [
-                    // --- Edit Button (Conditional) ---
-                    if (canEdit)
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              // Pass pickupId to SchedulePickup for edit mode
-                              builder: (context) => SchedulePickup(pickupId: widget.pickupId),
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.edit_outlined, size: 18), // Slightly smaller icon
-                        label: Text('Edit Pickup'),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimaryColor, // Or another suitable color like Colors.blue.shade700
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Adjusted padding
-                            textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold) // Adjusted font size
-                        ),
-                      ),
-
-                    // --- Cancel Button (Conditional) ---
-                    if (canCancel)
-                      ElevatedButton.icon(
-                        onPressed: _isCancelling ? null : () => _confirmCancellation(context, pickupRef),
-                        icon: _isCancelling
-                            ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) // Smaller indicator
-                            : Icon(Icons.cancel_outlined, size: 18),
-                        label: Text(_isCancelling ? 'Cancelling...' : 'Cancel Pickup'),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade700,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Adjusted padding
-                            textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold) // Adjusted font size
-                        ),
-                      ),
-                  ],
-                ),
-
-
-                // --- Show Cancelled Status ---
+                // --- Cancelled Alert ---
                 if (status == 'Cancelled')
-                  Padding( // Add padding around chip
-                    padding: const EdgeInsets.only(top: 20.0), // Space above chip if buttons are hidden
-                    child: Center(
-                      child: Chip(
-                        label: Text('Pickup Cancelled', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        backgroundColor: Colors.red.shade700,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.grey),
+                        const SizedBox(width: 10),
+                        Text('This pickup was cancelled.', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
 
-                SizedBox(height: 20), // Add bottom padding
+                // --- Pickup Status ---
+_buildSection(
+  title: "Pickup Status",
+  icon: Icons.info_outline,
+  child: Container(
+    width: double.infinity,
 
+    padding: const EdgeInsets.all(18),
+
+    decoration: BoxDecoration(
+      color: kCreamColor,
+
+      borderRadius:
+          BorderRadius.circular(16),
+    ),
+
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+      children: [
+
+        Text(
+          status,
+
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight:
+                FontWeight.bold,
+
+            color:
+                status == 'Completed'
+                    ? Colors.green
+                    : status ==
+                            'Cancelled'
+                        ? Colors.red
+                        : kPrimaryColor,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+
+  status == 'Pending'
+
+      ? 'Waiting for rider confirmation.'
+
+      : status == 'Confirmed'
+
+          ? 'Pickup confirmed successfully.'
+
+          : status == 'Out-for-Pickup'
+
+              ? 'Rider is on the way.'
+
+              : status == 'Estimate Sent'
+
+                  ? 'Estimate sent by rider. Please review.'
+
+                  : status == 'OTP Generated'
+
+                      ? 'Share OTP with rider.'
+
+                      : status == 'Completed'
+
+                          ? 'Pickup completed successfully.'
+
+                          : 'Pickup cancelled.',
+
+  style: TextStyle(
+    color: Colors.grey.shade700,
+    height: 1.4,
+  ),
+),  
+      ],
+    ),
+  ),
+),
+
+                // --- Location & Time ---
+                _buildSection(
+                  title: "Logistics",
+                  icon: Icons.location_on,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Address
+                      Text(addressDetails['addressType'] ?? 'Address', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${addressDetails['line1'] ?? ''}\n${addressDetails['fullAddress'] ?? ''}",
+                        style: TextStyle(color: Colors.grey.shade700, height: 1.3),
+                      ),
+
+                      const Divider(height: 24),
+
+                      // Date & Time
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Date", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                const SizedBox(height: 2),
+                                Text(pickupDate != null ? DateFormat('MMM d, yyyy').format(pickupDate) : 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Time Slot", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                const SizedBox(height: 2),
+                                Text(timeSlot ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+
+               
+
+if (data['estimateSent'] == true)
+  _buildSection(
+    title: "Pickup Estimate",
+    icon: Icons.payments_rounded,
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+      children: [
+
+        Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+
+          children: [
+
+            const Text(
+              "Estimated Weight",
+
+              style: TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+
+            Text(
+              "${data['finalWeight'] ?? 0} kg",
+
+              style: const TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+
+                color: kPrimaryColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+
+          children: [
+
+            const Text(
+              "Final Price",
+
+              style: TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+
+            Text(
+              "₹${data['finalPrice'] ?? 0}",
+
+              style: const TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+
+                color: kAccentColor,
+
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        /// ACCEPT / DECLINE
+        if (data['priceApproved'] != true)
+          Row(
+            children: [
+
+              Expanded(
+                child: ElevatedButton(
+
+                  onPressed: () async {
+
+                    final otp =
+                        1000 +
+                        (DateTime.now()
+                                .millisecondsSinceEpoch %
+                            9000);
+
+                    await FirebaseFirestore
+                        .instance
+                        .collection('pickups')
+                        .doc(widget.pickupId)
+                        .update({
+
+                      'priceApproved':
+                          true,
+
+                      'pickupOtp': otp,
+
+                      'status':
+                          'OTP Generated',
+                    });
+
+                    ScaffoldMessenger.of(
+                            context)
+                        .showSnackBar(
+
+                      const SnackBar(
+                        content: Text(
+                          'Estimate Accepted',
+                        ),
+                      ),
+                    );
+                  },
+
+                  style:
+                      ElevatedButton
+                          .styleFrom(
+                    backgroundColor:
+                        kPrimaryColor,
+                  ),
+
+                  child: const Text(
+                    "Accept",
+
+                    style: TextStyle(
+                      color:
+                          Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: OutlinedButton(
+
+                  onPressed: () async {
+
+  await FirebaseFirestore
+      .instance
+      .collection('pickups')
+      .doc(widget.pickupId)
+      .update({
+
+    'priceApproved':
+        false,
+
+    'status':
+        'Declined',
+
+    'declinedStatus':
+        true,
+
+    'estimateSent':
+        false,
+  });
+
+  ScaffoldMessenger.of(
+          context)
+      .showSnackBar(
+
+    const SnackBar(
+      content: Text(
+        'Estimate Declined',
+      ),
+    ),
+  );
+},
+
+                  child:
+                      const Text(
+                          "Decline"),
+                ),
+              ),
+            ],
+          ),
+
+        /// OTP CARD
+        if (data['priceApproved'] ==
+                true &&
+            data['pickupOtp'] !=
+                null)
+
+          Container(
+
+            margin:
+                const EdgeInsets.only(
+                    top: 20),
+
+            padding:
+                const EdgeInsets.all(
+                    20),
+
+            width: double.infinity,
+
+            decoration: BoxDecoration(
+
+              color: kCreamColor,
+
+              borderRadius:
+                  BorderRadius.circular(
+                      18),
+
+              border: Border.all(
+                color: kAccentColor,
+              ),
+            ),
+
+            child: Column(
+              children: [
+
+                const Text(
+                  "Share OTP With Rider",
+
+                  style: TextStyle(
+                    fontWeight:
+                        FontWeight.bold,
+
+                    color:
+                        kPrimaryColor,
+                  ),
+                ),
+
+                const SizedBox(
+                    height: 12),
+
+                Text(
+                  "${data['pickupOtp']}",
+
+                  style:
+                      const TextStyle(
+
+                    fontSize: 34,
+
+                    fontWeight:
+                        FontWeight.bold,
+
+                    letterSpacing: 5,
+
+                    color:
+                        kAccentColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  ),
+                // --- Action Buttons (Edit / Cancel) ---
+                if (canEdit || canCancel)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(
+                      children: [
+                        if (canCancel)
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isCancelling ? null : () => _confirmCancellation(context, pickupRef),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.red.shade200),
+                                foregroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: _isCancelling
+                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+                                  : const Text("Cancel"),
+                            ),
+                          ),
+
+                        if (canCancel && canEdit) const SizedBox(width: 15),
+
+                        if (canEdit)
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => SchedulePickup(pickupId: widget.pickupId)),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: kPrimaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 3,
+                              ),
+                              child: const Text("Edit Pickup"),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
               ],
             ),
           );

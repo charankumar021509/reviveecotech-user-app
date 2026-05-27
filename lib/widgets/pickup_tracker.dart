@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../pickup_details_page.dart'; // ✅ 1. IMPORT THE DETAILS PAGE
+import '../pickup_details_page.dart';
 
 // Constants
 const kPrimaryColor = Color(0xFF013856);
@@ -12,14 +12,14 @@ class PickupTracker extends StatelessWidget {
   final int currentStep;
   final DateTime? pickupDate;
   final bool showUpcomingTag;
-  final String? pickupId; // ✅ 2. ADD PICKUP ID
+  final String? pickupId;
 
   const PickupTracker({
     super.key,
     required this.currentStep,
     this.pickupDate,
     this.showUpcomingTag = false,
-    this.pickupId, // ✅ 2. ADD TO CONSTRUCTOR
+    this.pickupId,
   });
 
   static const List<IconData> _stepIcons = [
@@ -40,12 +40,10 @@ class PickupTracker extends StatelessWidget {
   Widget build(BuildContext context) {
     final String formattedDate = pickupDate != null
         ? DateFormat('MMMM d, yyyy').format(pickupDate!)
-        : '';
+        : 'Date TBD';
 
-    // ✅ 3. WRAP THE STACK IN A GESTURE DETECTOR
     return GestureDetector(
       onTap: () {
-        // Navigate only if we have an ID
         if (pickupId != null) {
           Navigator.push(
             context,
@@ -56,20 +54,18 @@ class PickupTracker extends StatelessWidget {
         }
       },
       child: Stack(
-        clipBehavior: Clip.none,
         children: [
-          // This is the main tracker card (Container)
+          // Main Card Content
           Container(
-            // ... rest of the Container setup remains the same ...
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20), // More rounded
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.08), // Softer, deeper shadow
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
@@ -77,33 +73,51 @@ class PickupTracker extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Date Row
-                if (pickupDate != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month,
-                            color: kPrimaryColor, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Pickup on: $formattedDate",
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: kPrimaryColor,
-                          ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: kPrimaryColor.withOpacity(0.05),
+                          shape: BoxShape.circle,
                         ),
-                      ],
-                    ),
+                        child: const Icon(Icons.calendar_month,
+                            color: kPrimaryColor, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Scheduled Pickup",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            formattedDate,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: kPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
 
                 // Steps Row
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Align tops
                   children: [
                     for (var i = 0; i < _stepLabels.length; i++) ...[
-                      if (i > 0)
-                        _buildConnector(isActive: i < currentStep),
+                      if (i > 0) _buildConnector(isActive: i < currentStep),
                       _buildStep(
                         context: context,
                         icon: _stepIcons[i],
@@ -121,33 +135,32 @@ class PickupTracker extends StatelessWidget {
           // Upcoming Tag
           if (showUpcomingTag)
             Positioned(
-              // ... rest of the Positioned setup remains the same ...
-              top: 10,
-              right: -10,
+              top: 0,
+              right: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: const BoxDecoration(
                   color: kAccentColor,
-                  borderRadius: BorderRadius.circular(5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(1, 1),
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.bolt, size: 14, color: kPrimaryColor),
+                    SizedBox(width: 4),
+                    Text(
+                      "UPCOMING",
+                      style: TextStyle(
+                        color: kPrimaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ],
-                ),
-                child: const RotatedBox(
-                  quarterTurns: 1,
-                  child: Text(
-                    "UPCOMING",
-                    style: TextStyle(
-                      color: kPrimaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
                 ),
               ),
             ),
@@ -156,16 +169,13 @@ class PickupTracker extends StatelessWidget {
     );
   }
 
-  // _buildConnector and _buildStep methods remain exactly the same
   Widget _buildConnector({required bool isActive}) {
     return Expanded(
       child: Container(
-        height: 4,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: isActive ? kAccentColor : const Color(0xFFE0E0E0),
-          borderRadius: BorderRadius.circular(2),
-        ),
+        // Push down to align with circle center (approx 44/2 - height/2)
+        margin: const EdgeInsets.only(top: 20),
+        height: 3,
+        color: isActive ? kAccentColor : const Color(0xFFEEEEEE),
       ),
     );
   }
@@ -177,33 +187,41 @@ class PickupTracker extends StatelessWidget {
     required bool isActive,
     required bool isCompleted,
   }) {
-    final Color circleColor = (isActive || isCompleted) ? kAccentColor : const Color(0xFFE0E0E0);
-    final Color iconAndTextColor = (isActive || isCompleted) ? kPrimaryColor : Colors.grey.shade600;
+    final bool isDoneOrActive = isActive || isCompleted;
+
+    // Circle Color Logic
+    final Color borderColor = isDoneOrActive ? kAccentColor : Colors.grey.shade300;
+    final Color fillColor = isActive ? kAccentColor.withOpacity(0.15) : (isCompleted ? kAccentColor : Colors.transparent);
+    final Color iconColor = isCompleted ? Colors.white : (isActive ? kPrimaryColor : Colors.grey.shade400);
+
+    // Text Style Logic
+    final TextStyle textStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+      color: isActive ? kPrimaryColor : Colors.grey.shade500,
+      height: 1.2,
+    );
 
     return Column(
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           width: 44,
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: circleColor, width: 2),
-            color: (isActive) ? kAccentColor.withOpacity(0.2) : Colors.transparent,
+            border: Border.all(color: borderColor, width: isCompleted ? 0 : 2),
+            color: fillColor,
           ),
-          child: Icon(icon, color: iconAndTextColor, size: 22),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
         const SizedBox(height: 8),
         SizedBox(
-          width: 65,
+          width: 60,
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              color: iconAndTextColor,
-              height: 1.2,
-            ),
+            style: textStyle,
           ),
         ),
       ],

@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:revive_eco_tech_app/home.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// --- Constants ---
+const kPrimaryColor = Color(0xFF013D5A);
+const kAccentColor = Color(0xFFA6CB4E);
+const kCreamColor = Color(0xFFFCF3E3);
+
 class EmailVerificationPage extends StatefulWidget {
+  const EmailVerificationPage({super.key});
+
   @override
-  _EmailVerificationPageState createState() => _EmailVerificationPageState();
+  State<EmailVerificationPage> createState() => _EmailVerificationPageState();
 }
 
 class _EmailVerificationPageState extends State<EmailVerificationPage> {
@@ -18,69 +23,67 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   @override
   void initState() {
     super.initState();
-
-    // ✨ FIX IS HERE
-    // We can't call _showSnackBar directly from initState.
-    // Instead, we use addPostFrameCallback to run it *after* the build is complete.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showSnackBar("Please check your inbox to verify your email.",
           isError: false, isInfo: true);
     });
-
-    // This call is fine because its own SnackBar calls happen *after* an 'await'
-    checkVerification();
+    // Initial check (silent)
+    _checkVerification(silent: true);
   }
 
-  // Helper function for showing feedback
-  void _showSnackBar(String message,
-      {bool isError = false, bool isInfo = false}) {
+  void _showSnackBar(String message, {bool isError = false, bool isInfo = false}) {
     if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor:
-        isError ? Colors.red : (isInfo ? Color(0xFF013D5A) : Color(0xFFA6CB4E)),
+        content: Text(message, textAlign: TextAlign.center),
+        backgroundColor: isError ? Colors.red : (isInfo ? kPrimaryColor : kAccentColor),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(20),
       ),
     );
   }
 
-  Future<void> checkVerification() async {
+  Future<void> _checkVerification({bool silent = false}) async {
     setState(() => isLoading = true);
-    await FirebaseAuth.instance.currentUser?.reload();
-    final user = FirebaseAuth.instance.currentUser;
-    setState(() {
-      isVerified = user?.emailVerified ?? false;
-      isLoading = false;
-    });
+    try {
+      await FirebaseAuth.instance.currentUser?.reload();
+      final user = FirebaseAuth.instance.currentUser;
 
-    if (isVerified) {
-      // Add check to ensure user profile exists before navigating
-      if (user != null) {
-        final userDocRef =
-        FirebaseFirestore.instance.collection('users').doc(user.uid);
-        final docSnap = await userDocRef.get();
+      setState(() {
+        isVerified = user?.emailVerified ?? false;
+        isLoading = false;
+      });
 
-        if (!docSnap.exists) {
-          // Profile doesn't exist, so create it.
-          await userDocRef.set({
-            'name': 'User-${user.uid.substring(0, 6)}', // Default name
-            'phone': '', // Default empty phone
-            'createdAt': FieldValue.serverTimestamp(),
-            'email': user.email,
-          });
+      if (isVerified) {
+        if (user != null) {
+          final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+          final docSnap = await userDocRef.get();
+
+          if (!docSnap.exists) {
+            await userDocRef.set({
+              'name': user.displayName ?? 'User-${user.uid.substring(0, 6)}',
+              'phone': '',
+              'createdAt': FieldValue.serverTimestamp(),
+              'email': user.email,
+            });
+          }
+        }
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      } else {
+        if (!silent) {
+          _showSnackBar("Email not verified yet. Check your inbox & spam folder.", isError: true);
         }
       }
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-    } else {
-      // This call is fine because it happens after the 'await' in initState
-      _showSnackBar("Email not verified yet. Please check your inbox.",
-          isError: true);
+    } catch (e) {
+      if (!silent) _showSnackBar("Error checking status: $e", isError: true);
+      setState(() => isLoading = false);
     }
   }
 
@@ -88,130 +91,189 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       await user?.sendEmailVerification();
-      _showSnackBar("Verification email resent!");
+      _showSnackBar("Verification email resent! Check your inbox.");
     } catch (e) {
-      _showSnackBar("Failed to resend email: $e", isError: true);
+      _showSnackBar("Failed to resend email. Wait a moment and try again.", isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFCF3E3),
-      appBar: AppBar(
-        title: Text(
-          'Verify Your Email',
-          style: TextStyle(
-            fontFamily: 'RedHatDisplay',
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFCF3E3),
-          ),
-        ),
-        backgroundColor: Color(0xFF013D5A),
-        centerTitle: true,
-        automaticallyImplyLeading: false, // No back button
-      ),
-      body: Center(
-        child: isLoading
-            ? CircularProgressIndicator(
-          color: Color(0xFF013D5A),
-        )
-            : Padding(
-          padding: const EdgeInsets.all(30.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.mark_email_read_outlined,
-                size: 100,
-                color: Color(0xFF013D5A),
+      backgroundColor: kCreamColor,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // ✅ 1. CEVUS: Curvy Header
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: kPrimaryColor,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))
+                ],
               ),
-              SizedBox(height: 30),
-              Text(
-                "A verification link has been sent to your email.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'RedHatDisplay',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF013D5A),
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                "Please click the link in your email to continue. You may need to check your spam folder.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'RedHatDisplay',
-                  fontSize: 16,
-                  color: Color(0xFF013D5A).withOpacity(0.8),
-                ),
-              ),
-              SizedBox(height: 40),
-              GestureDetector(
-                onTap: checkVerification,
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Color(0xFFA6CB4E), // Your app's button color
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        spreadRadius: 3,
-                        blurRadius: 5,
-                        offset: Offset(4, 4),
+              child: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.mark_email_unread_outlined, size: 60, color: kAccentColor),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Verify Your Email',
+                        style: TextStyle(
+                          fontFamily: 'RedHatDisplay',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                          color: kCreamColor,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Text(
-                      "I've Verified, Continue",
-                      style: TextStyle(
-                        fontFamily: 'RedHatDisplay',
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFFCF3E3), // Your button text color
-                        fontSize: 22,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // ✅ 2. Main Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                children: [
+                  Text(
+                    "One Last Step!",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'RedHatDisplay',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: kPrimaryColor.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "We have sent a verification link to:\n${FirebaseAuth.instance.currentUser?.email ?? 'your email'}",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'RedHatDisplay',
+                      fontSize: 16,
+                      height: 1.5,
+                      color: kPrimaryColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "(Please check your Spam folder if you don't see it)",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'RedHatDisplay',
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+
+                  const SizedBox(height: 50),
+
+                  // ✅ 3. CEVUS: Vibrant Primary Button
+                  SizedBox(
+                    height: 60,
+                    width: double.infinity,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [kAccentColor, Color(0xFFC0E862)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kAccentColor.withOpacity(0.4),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          )
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : () => _checkVerification(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: isLoading
+                            ? const CircularProgressIndicator(color: kPrimaryColor)
+                            : const Text(
+                          "I've Verified, Continue",
+                          style: TextStyle(
+                            fontFamily: 'RedHatDisplay',
+                            fontWeight: FontWeight.bold,
+                            color: kPrimaryColor,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              SizedBox(height: 20),
-              GestureDetector(
-                onTap: resendVerificationEmail,
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Color(0xFFFCF3E3), // Light background
-                    border: Border.all(
-                        color: Color(0xFF013D5A),
-                        width: 3), // Dark border
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        spreadRadius: 3,
-                        blurRadius: 5,
-                        offset: Offset(4, 4),
+
+                  const SizedBox(height: 20),
+
+                  // ✅ 4. Clean Outline Button
+                  SizedBox(
+                    height: 60,
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: resendVerificationEmail,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: kPrimaryColor, width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        foregroundColor: kPrimaryColor, // Ripple color
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      "Resend Email",
-                      style: TextStyle(
-                        fontFamily: 'RedHatDisplay',
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF013D5A), // Dark text
-                        fontSize: 22,
+                      child: const Text(
+                        "Resend Email",
+                        style: TextStyle(
+                          fontFamily: 'RedHatDisplay',
+                          fontWeight: FontWeight.bold,
+                          color: kPrimaryColor,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 20),
+
+                  // Back to Login option (just in case)
+                  TextButton(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: Text(
+                      "Sign in with different account",
+                      style: TextStyle(
+                          color: kPrimaryColor.withOpacity(0.6),
+                          fontWeight: FontWeight.w600
+                      ),
+                    ),
+                  )
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

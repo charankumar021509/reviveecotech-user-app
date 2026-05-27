@@ -7,6 +7,45 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:967064516173:android:21dffa95ea00f8227b0e04",
+        "android_client_info": {
+          "package_name": "com.example.reviveecotech_rider"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "967064516173-pcg6qg7uogg60jpf85pn0frokh1ge09d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYQyp01LyjwyINBM_UyUy2hoKSw9qYuzA"
+        },
+        {
+          "current_key": "AIzaSyAD1R57gc79GhvQQs_g7GI038MgquHqY4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "967064516173-pcg6qg7uogg60jpf85pn0frokh1ge09d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "967064516173-4mrjufdpve21afs9silga4scsi62lvlj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.reviveecotechRider"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:967064516173:android:c73c8d69216b1b947b0e04",
         "android_client_info": {
           "package_name": "com.revive_eco_tech_app.revive_eco_tech_app"
@@ -30,11 +69,38 @@
           }
         },
         {
+          "client_id": "967064516173-kc5psp4f2mmokl4man7s9c18bib2euos.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.revive_eco_tech_app.revive_eco_tech_app",
+            "certificate_hash": "08feea975e7626bde7ddecb59ab7482bb0824afd"
+          }
+        },
+        {
+          "client_id": "967064516173-mai99s4ul1q23jbi3ka7aent24f3cd0m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.revive_eco_tech_app.revive_eco_tech_app",
+            "certificate_hash": "7b505cc5e8d185a54e132b56cc9a9f479f2916f5"
+          }
+        },
+        {
+          "client_id": "967064516173-qjj5m1s3eu3jj06bbuc298588qak9s93.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.revive_eco_tech_app.revive_eco_tech_app",
+            "certificate_hash": "9c7c502c7df9a1a25491a599b2f6991dde5d1744"
+          }
+        },
+        {
           "client_id": "967064516173-pcg6qg7uogg60jpf85pn0frokh1ge09d.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
+        {
+          "current_key": "AIzaSyCYQyp01LyjwyINBM_UyUy2hoKSw9qYuzA"
+        },
         {
           "current_key": "AIzaSyAD1R57gc79GhvQQs_g7GI038MgquHqY4Q"
         }
@@ -47,10 +113,10 @@
               "client_type": 3
             },
             {
-              "client_id": "967064516173-v07m865uqnuf8v97ohefr77k1vs8l2mq.apps.googleusercontent.com",
+              "client_id": "967064516173-4mrjufdpve21afs9silga4scsi62lvlj.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.reviveecotechapp.reviveEcoTechApp"
+                "bundle_id": "com.example.reviveecotechRider"
               }
             }
           ]

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:revive_eco_tech_app/home.dart';
-import 'package:revive_eco_tech_app/launch_page.dart';
+import 'package:revive_eco_tech_app/launch_page.dart'; // Ensure this import matches your file structure
 import 'package:revive_eco_tech_app/emailverification.dart';
+
+// --- Constants ---
+const kPrimaryColor = Color(0xFF013D5A);
+const kCreamColor = Color(0xFFFCF3E3);
+const kAccentColor = Color(0xFFA6CB4E);
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -12,47 +17,56 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // 1. While waiting for the connection
+
+        // 1. LOADING STATE (Branded)
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFFFCF3E3),
+          return Scaffold(
+            backgroundColor: kCreamColor,
             body: Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF013D5A),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Show Logo for a professional "Splash" feel
+                  Image.asset(
+                    'assets/images/home/logo2.png', // Ensure you have this asset
+                    width: 150,
+                    height: 150,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 20),
+                  const CircularProgressIndicator(
+                    color: kAccentColor,
+                    strokeWidth: 3,
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        // 2. If a user is logged in
+        // 2. LOGGED IN STATE
         if (snapshot.hasData) {
           final user = snapshot.data!;
 
-          // ✨ NEW LOGIC START ✨
-
-          // Check if any of the user's authentication providers is 'phone'.
-          // user.providerData is a list of all methods linked to the account (password, phone, google.com etc).
+          // Check if user authenticated via Phone
           final isPhoneUser = user.providerData.any(
                 (userInfo) => userInfo.providerId == 'phone',
           );
 
-          // If the user authenticated with their phone OR their email is verified,
-          // they are fully authenticated and can proceed to the home page.
+          // ✅ LOGIC CHECK:
+          // 1. Phone users -> Home (No email to verify)
+          // 2. Email users (Verified) -> Home
+          // 3. Email users (Unverified) -> Verification Page
           if (isPhoneUser || user.emailVerified) {
             return const HomePage();
           } else {
-            // This 'else' block is now only reached if the user is NOT a phone user
-            // AND their email is NOT verified. This correctly targets only the
-            // users who need to verify their email.
-            return EmailVerificationPage();
+            return const EmailVerificationPage();
           }
-
-          // ✨ NEW LOGIC END ✨
         }
 
-        // 3. If no user is logged in
+        // 3. LOGGED OUT STATE
         else {
-          return launch_page();
+          return const LaunchPage();
         }
       },
     );

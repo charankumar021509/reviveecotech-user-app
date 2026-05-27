@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ✅ 1. Define a list of your placeholder images
-final _placeholderImages = [
-  'assets/images/home/drives/plastic.png',
-  'assets/images/home/drives/recycle.png',
-  // You can add a third one if you have it
-  'assets/images/home/15.png',
+// ✅ 1. Rotating Placeholder Assets
+// These are used for the "Coming Soon" cards
+final List<String> _placeholderImages = [
+  'assets/images/home/drives/plastic.jpeg',
+  'assets/images/home/drives/recycle.jpeg',
+  // Add more here if needed
 ];
 
 class Drive {
@@ -27,35 +27,51 @@ class Drive {
     this.isPlaceholder = false,
   });
 
-  // Factory to create a Drive from a Firestore document
+  // ✅ 2. CEVUS STANDARD: Robust Factory
   factory Drive.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return Drive(
       id: doc.id,
-      title: data['title'] ?? 'Untitled Drive',
-      location: data['location'] ?? 'Location TBD',
-      // Firestore 'date' field should be a Timestamp
-      date: (data['date'] as Timestamp? ?? Timestamp.now()).toDate(),
-      details: data['details'] ?? 'More details to come.',
-      imageUrl: data['imageUrl'] ?? 'assets/images/home/drives/recycle.png', // Default image
+      title: data['title'] as String? ?? 'Untitled Drive',
+      location: data['location'] as String? ?? 'Location TBD',
+      // Safe Timestamp handling (Fall back to Now if missing)
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      details: data['details'] as String? ?? 'More details to come.',
+      // Fallback image if URL is missing
+      imageUrl: data['imageUrl'] as String? ?? 'assets/images/home/drives/recycle.jpeg',
       isPlaceholder: false,
     );
   }
 
-  // Factory to create a "Coming Soon" placeholder drive
+  // ✅ 3. SMART PLACEHOLDER GENERATOR
+  // Creates a dummy "Coming Soon" drive for empty slots in the UI
   factory Drive.placeholder({required int uniqueId}) {
-    // ✅ 2. Use the uniqueId to pick an image from the list
-    // The '%' (modulo) operator ensures we never go out of bounds
+    // Rotates through the images list based on the ID so cards look varied
     final imagePath = _placeholderImages[uniqueId % _placeholderImages.length];
 
     return Drive(
       id: 'placeholder_$uniqueId',
       title: 'Drive Coming Soon!',
       location: 'Your Society Could Be Next!',
-      date: DateTime.now(),
-      details: 'Check back soon for more details on upcoming drives in your area.',
-      imageUrl: imagePath, // ✅ 3. Use the selected image path
+      date: DateTime.now().add(const Duration(days: 30)), // Future date
+      details: 'We are actively looking for new partners. Check back soon for more details on upcoming drives in your area.',
+      imageUrl: imagePath,
       isPlaceholder: true,
     );
+  }
+
+  // ✅ 4. ADDED: Standard Serialization
+  // Useful for debugging or sending data back to a server
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'location': location,
+      'date': Timestamp.fromDate(date),
+      'details': details,
+      'imageUrl': imageUrl,
+      'isPlaceholder': isPlaceholder,
+    };
   }
 }

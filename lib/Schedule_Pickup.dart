@@ -4,15 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // For formatting the currency
 import 'manage_addresses.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 // ==== Constants ====
 const kPrimaryColor = Color(0xFF013D5A);
 const kCreamColor = Color(0xFFFCF3E3);
 const kAccentColor = Color(0xFFA6CB4E);
 
-// ==== NEW: Data Model for Selected Item ====
+// ==== Data Model for Selected Item ====
 class SelectedScrapItem {
-  // ... (SelectedScrapItem class remains unchanged) ...
   final String categoryId;
   final String categoryName;
   final String itemId;
@@ -32,18 +32,15 @@ class SelectedScrapItem {
     required this.pricePerUnit,
   }) : calculatedCost = amount * pricePerUnit;
 
-  // Method to update amount and recalculate cost
   void updateAmount(double newAmount) {
     amount = newAmount;
     calculatedCost = amount * pricePerUnit;
   }
 
-  // Helper for display
   String get displayAmount {
     return (unit == 'kg') ? amount.toStringAsFixed(1) : amount.round().toString();
   }
 
-  // ✅ NEW: Helper to convert back to Map for saving
   Map<String, dynamic> toMap() {
     return {
       'categoryId': categoryId,
@@ -60,15 +57,14 @@ class SelectedScrapItem {
 
 class SchedulePickup extends StatefulWidget {
   final String? pickupId;
-  // ✅ 1. ADDED new properties for tab navigation
   final VoidCallback? onPickupScheduled;
   final bool isTab;
 
   const SchedulePickup({
     super.key,
     this.pickupId,
-    this.onPickupScheduled, // Callback for success
-    this.isTab = false, // Default to false (for "pushed" routes)
+    this.onPickupScheduled,
+    this.isTab = false,
   });
 
   @override
@@ -78,6 +74,8 @@ class SchedulePickup extends StatefulWidget {
 TextEditingController dateController = TextEditingController();
 
 class _SchedulePickupState extends State<SchedulePickup> {
+  DateTime selectedPickupDate =
+    DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
 
   // Address State
@@ -102,7 +100,6 @@ class _SchedulePickupState extends State<SchedulePickup> {
   double _totalEstimatedWeight = 0.0;
 
   void showCustomPopup(BuildContext context) {
-    // ... (showCustomPopup implementation - no changes) ...
     showDialog(
       context: context,
       builder: (context) {
@@ -113,6 +110,44 @@ class _SchedulePickupState extends State<SchedulePickup> {
           '03:00PM - 05:00PM',
           '05:00PM - 07:00PM',
         ];
+     List<String> availableSlots = [];
+
+DateTime now = DateTime.now();
+
+for (String slot in slots) {
+
+  int endHour = 23;
+
+  if (slot.contains('09:00AM - 11:00AM')) {
+
+    endHour = 11;
+
+  } else if (slot.contains('11:00AM - 01:00PM')) {
+
+    endHour = 13;
+
+  } else if (slot.contains('03:00PM - 05:00PM')) {
+
+    endHour = 17;
+
+  } else if (slot.contains('05:00PM - 07:00PM')) {
+
+    endHour = 19;
+  }
+
+ final slotEnd = DateTime(
+
+  selectedPickupDate.year,
+  selectedPickupDate.month,
+  selectedPickupDate.day,
+  endHour,
+);
+
+  if (now.isBefore(slotEnd)) {
+
+    availableSlots.add(slot);
+  }
+}
 
         return StatefulBuilder(
           builder: (context, setState) => Dialog(
@@ -128,39 +163,47 @@ class _SchedulePickupState extends State<SchedulePickup> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Add time slot',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    'Select Pickup Slot',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kPrimaryColor),
                   ),
                   SizedBox(height: 16),
-                  ...List.generate(slots.length, (index) {
+                  ...List.generate(
+  availableSlots.length,
+  (index) {
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
                             selectedIndex = index;
                           });
                           Navigator.of(context).pop();
-                          _onTimeSlotSelected(slots[index]);
+                          _onTimeSlotSelected(
+    availableSlots[index],
+);
                         },
                         child: Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: selectedIndex == index
-                                ? kAccentColor
-                                : Colors.transparent,
-                            border: Border.all(width: 1, color: Colors.black54),
-                            borderRadius: BorderRadius.circular(8),
+                              color: selectedIndex == index
+                                  ? kAccentColor
+                                  : Colors.white,
+                              border: Border.all(width: 1, color: selectedIndex == index ? kAccentColor : Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                if(selectedIndex != index)
+                                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: Offset(0, 2))
+                              ]
                           ),
                           child: Center(
                             child: Padding(
-                              padding: const EdgeInsets.all(10.0),
+                              padding: const EdgeInsets.symmetric(vertical: 12.0),
                               child: Text(
-                                slots[index],
+  availableSlots[index],
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: selectedIndex == index ? kPrimaryColor : Colors.black87,
                                 ),
                               ),
                             ),
@@ -203,7 +246,6 @@ class _SchedulePickupState extends State<SchedulePickup> {
   }
 
   Future<void> _fetchAddresses() async {
-    // ... (_fetchAddresses implementation - no changes) ...
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       if (mounted) setState(() => _isLoadingAddresses = false);
@@ -233,18 +275,15 @@ class _SchedulePickupState extends State<SchedulePickup> {
   }
 
   Future<void> _fetchPriceList() async {
-    // ... (_fetchPriceList implementation - no changes) ...
     if (mounted) setState(() => _isLoadingPrices = true);
     Map<String, Map<String, dynamic>> tempCategories = {};
 
     try {
-      // 1. Get all categories
       final categorySnapshot = await FirebaseFirestore.instance
           .collection('price_list')
           .orderBy('order')
           .get();
 
-      // 2. For each category, get its items
       for (var categoryDoc in categorySnapshot.docs) {
         final categoryData = categoryDoc.data();
         final categoryId = categoryDoc.id;
@@ -259,14 +298,13 @@ class _SchedulePickupState extends State<SchedulePickup> {
         for (var itemDoc in itemsSnapshot.docs) {
           final itemData = itemDoc.data();
           itemsList.add({
-            'id': itemDoc.id, // Store item ID
+            'id': itemDoc.id,
             'name': itemData['name'] ?? 'Unnamed Item',
             'price': (itemData['price'] as num?)?.toDouble() ?? 0.0,
             'unit': itemData['unit'] ?? 'unit',
           });
         }
 
-        // Store category info and its items
         tempCategories[categoryId] = {
           'name': categoryName,
           'items': itemsList,
@@ -283,13 +321,11 @@ class _SchedulePickupState extends State<SchedulePickup> {
       if (mounted) {
         setState(() => _isLoadingPrices = false);
         _showSnackBar("Failed to load scrap prices: $e", isError: true);
-        print("Error fetching price list: $e");
       }
     }
   }
 
   Future<void> _loadPickupData(String pickupId) async {
-    // ... (_loadPickupData implementation - no changes) ...
     if (!mounted) return;
     setState(() => _isLoadingPickupData = true);
 
@@ -298,7 +334,7 @@ class _SchedulePickupState extends State<SchedulePickup> {
 
       if (!pickupDoc.exists || !mounted) {
         _showSnackBar("Pickup data not found.", isError: true);
-        Navigator.pop(context); // Go back if data isn't found
+        Navigator.pop(context);
         return;
       }
 
@@ -310,13 +346,10 @@ class _SchedulePickupState extends State<SchedulePickup> {
               (addrDoc) => addrDoc.id == data['addressId'],
         );
       } catch (e) {
-        print("Warning: Saved address ID ${data['addressId']} not found in current user's address list.");
         matchingAddress = null;
       }
       _selectedAddress = matchingAddress;
 
-
-      // Pre-fill Date
       final pickupDate = (data['pickupDate'] as Timestamp?)?.toDate();
       if (pickupDate != null) {
         dateController.text = pickupDate.toLocal().toString().split(" ")[0];
@@ -324,13 +357,9 @@ class _SchedulePickupState extends State<SchedulePickup> {
         dateController.clear();
       }
 
-      // Pre-fill Time Slot
       _selectedTimeSlot = data['pickupTimeSlot'] as String?;
-
-      // Pre-fill Description
       _descriptionController.text = data['description'] ?? '';
 
-      // Rebuild the _selectedItems list
       final List<dynamic> itemsFromDb = data['scrapItems'] ?? [];
       _selectedItems = itemsFromDb.whereType<Map<String, dynamic>>().map((itemMap) {
         return SelectedScrapItem(
@@ -348,15 +377,13 @@ class _SchedulePickupState extends State<SchedulePickup> {
 
     } catch (e) {
       _showSnackBar("Error loading pickup data: $e", isError: true);
-      print("Load Error: $e");
-      if (mounted) Navigator.pop(context); // Go back on error
+      if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _isLoadingPickupData = false);
     }
   }
 
   void _updateTotals() {
-    // ... (_updateTotals implementation - no changes) ...
     double newCost = 0.0;
     double newWeight = 0.0;
 
@@ -373,8 +400,8 @@ class _SchedulePickupState extends State<SchedulePickup> {
     });
   }
 
+  // ✅ CEVUS: Popup Overhaul
   void _showItemSelectionPopup(BuildContext context, String categoryId) {
-    // ... (_showItemSelectionPopup implementation - no changes) ...
     final categoryData = _availableCategories[categoryId];
     if (categoryData == null || (categoryData['items'] as List).isEmpty) return;
 
@@ -386,25 +413,37 @@ class _SchedulePickupState extends State<SchedulePickup> {
     if (selectedSubItem != null) {
       existingCartItem = _selectedItems.firstWhere(
               (item) => item.itemId == selectedSubItem!['id'],
-          orElse: () => SelectedScrapItem(categoryId: '', categoryName: '', itemId: '', itemName: '', amount: 0, unit: '', pricePerUnit: 0) // Dummy item if not found
+          orElse: () => SelectedScrapItem(categoryId: '', categoryName: '', itemId: '', itemName: '', amount: 0, unit: '', pricePerUnit: 0)
       );
     }
     double localAmount = existingCartItem?.amount ?? 0.0;
-
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             final String unit = selectedSubItem?['unit'] ?? 'kg';
-            final double maxSliderValue = (unit.toLowerCase() == 'kg') ? 200.0 : 50.0;
-            final int divisions = (unit.toLowerCase() == 'kg') ? 400 : 50;
+            final bool isKg = unit.toLowerCase() == 'kg';
+            final double maxSliderValue = isKg ? 200.0 : 50.0;
+            final int divisions = isKg ? 400 : 50;
+            final double price = selectedSubItem?['price'] ?? 0.0;
+            final double estimatedCost = localAmount * price;
+
+            // Helper to modify amount safely
+            void modifyAmount(double delta) {
+              double newValue = localAmount + delta;
+              if (newValue < 0) newValue = 0;
+              if (newValue > maxSliderValue) newValue = maxSliderValue;
+              setModalState(() {
+                localAmount = newValue;
+              });
+            }
 
             return Container(
               padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
@@ -412,99 +451,138 @@ class _SchedulePickupState extends State<SchedulePickup> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Add item for $categoryName',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: kPrimaryColor,
-                    ),
+                  // Title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Add $categoryName',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: kPrimaryColor,
+                        ),
+                      ),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: Colors.grey))
+                    ],
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 15),
 
-                  // --- Sub-item Dropdown ---
-                  DropdownButtonFormField<Map<String, dynamic>>(
-                    value: selectedSubItem,
-                    items: items.map((item) {
-                      return DropdownMenuItem<Map<String, dynamic>>(
-                        value: item,
-                        child: Text("${item['name']} (₹${item['price']}/${item['unit']})"),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      if (newValue != null) {
-                        setModalState(() {
-                          selectedSubItem = newValue;
-                          existingCartItem = _selectedItems.firstWhere(
-                                  (item) => item.itemId == selectedSubItem!['id'],
-                              orElse: () => SelectedScrapItem(categoryId: '', categoryName: '', itemId: '', itemName: '', amount: 0, unit: '', pricePerUnit: 0) // Dummy item
+                  // Item Dropdown
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<Map<String, dynamic>>(
+                        value: selectedSubItem,
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: kPrimaryColor),
+                        items: items.map((item) {
+                          return DropdownMenuItem<Map<String, dynamic>>(
+                            value: item,
+                            child: Text("${item['name']} (₹${item['price']}/${item['unit']})", style: TextStyle(fontWeight: FontWeight.w500)),
                           );
-                          localAmount = existingCartItem?.amount ?? 0.0;
-                        });
-                      }
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'Select Item Type',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        }).toList(),
+                        onChanged: (newValue) {
+                          if (newValue != null) {
+                            setModalState(() {
+                              selectedSubItem = newValue;
+                              existingCartItem = _selectedItems.firstWhere(
+                                      (item) => item.itemId == selectedSubItem!['id'],
+                                  orElse: () => SelectedScrapItem(categoryId: '', categoryName: '', itemId: '', itemName: '', amount: 0, unit: '', pricePerUnit: 0)
+                              );
+                              localAmount = existingCartItem?.amount ?? 0.0;
+                            });
+                          }
+                        },
+                      ),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 25),
 
-                  // --- Amount Slider ---
+                  // Amount Slider with +/- Controls
                   if (selectedSubItem != null) ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'Estimated Amount:',
-                          style: TextStyle(fontSize: 16),
+                          'Est. Weight / Units:',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[700]),
                         ),
                         Text(
-                          (unit.toLowerCase() == 'kg')
-                              ? '${localAmount.toStringAsFixed(1)} $unit'
-                              : '${localAmount.round()} $unit',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: kPrimaryColor,
-                          ),
+                          isKg ? '${localAmount.toStringAsFixed(1)} $unit' : '${localAmount.round()} $unit',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimaryColor),
                         ),
                       ],
                     ),
-                    Slider(
-                      value: localAmount,
-                      min: 0,
-                      max: maxSliderValue,
-                      divisions: divisions,
-                      label: (unit.toLowerCase() == 'kg')
-                          ? localAmount.toStringAsFixed(1)
-                          : localAmount.round().toString(),
-                      activeColor: kPrimaryColor,
-                      inactiveColor: Colors.grey.shade300,
-                      onChanged: (double value) {
-                        setModalState(() {
-                          if (unit.toLowerCase() == 'kg') {
-                            localAmount = value;
-                          } else {
-                            localAmount = value.roundToDouble();
-                          }
-                        });
-                      },
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        // Minus Button
+                        IconButton.filled(
+                          onPressed: () => modifyAmount(isKg ? -0.5 : -1.0),
+                          icon: Icon(Icons.remove, color: kPrimaryColor),
+                          style: IconButton.styleFrom(backgroundColor: kAccentColor.withOpacity(0.3)),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: localAmount,
+                            min: 0,
+                            max: maxSliderValue,
+                            divisions: divisions,
+                            activeColor: kPrimaryColor,
+                            inactiveColor: Colors.grey.shade300,
+                            onChanged: (double value) {
+                              setModalState(() {
+                                localAmount = isKg ? value : value.roundToDouble();
+                              });
+                            },
+                          ),
+                        ),
+                        // Plus Button
+                        IconButton.filled(
+                          onPressed: () => modifyAmount(isKg ? 0.5 : 1.0),
+                          icon: Icon(Icons.add, color: kPrimaryColor),
+                          style: IconButton.styleFrom(backgroundColor: kAccentColor.withOpacity(0.3)),
+                        ),
+                      ],
                     ),
-                  ],
-                  SizedBox(height: 20),
 
-                  // --- Add/Update Button ---
+                    // Projected Cost Display
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 20),
+                      padding: EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                          color: kCreamColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: kAccentColor.withOpacity(0.5))
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Projected Cost:", style: TextStyle(fontWeight: FontWeight.w600, color: kPrimaryColor)),
+                          Text(
+                            NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(estimatedCost),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kPrimaryColor),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+
+                  // Action Button
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kAccentColor,
                       foregroundColor: kPrimaryColor,
-                      minimumSize: Size(double.infinity, 50),
-                      textStyle: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      elevation: 0,
+                      minimumSize: Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     onPressed: selectedSubItem == null ? null : () {
                       final itemToAddOrUpdate = selectedSubItem!;
@@ -513,7 +591,7 @@ class _SchedulePickupState extends State<SchedulePickup> {
                       final double itemPrice = itemToAddOrUpdate['price'];
                       final String itemUnit = itemToAddOrUpdate['unit'];
 
-                      setState(() { // Update the main page state
+                      setState(() {
                         int existingIndex = _selectedItems.indexWhere((item) => item.itemId == itemId);
 
                         if (existingIndex != -1) {
@@ -535,10 +613,10 @@ class _SchedulePickupState extends State<SchedulePickup> {
                         }
                       });
 
-                      _updateTotals(); // Recalculate totals
-                      Navigator.pop(context); // Close the popup
+                      _updateTotals();
+                      Navigator.pop(context);
                     },
-                    child: Text( existingCartItem != null && existingCartItem!.amount > 0 ? 'Update Amount' : 'Add Item'),
+                    child: Text( existingCartItem != null && existingCartItem!.amount > 0 ? 'Update Item' : 'Add to Pickup'),
                   ),
                 ],
               ),
@@ -553,8 +631,11 @@ class _SchedulePickupState extends State<SchedulePickup> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(color: Colors.white)),
-        backgroundColor: isError ? Colors.red : kAccentColor,
+        content: Text(message, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: isError ? Colors.red.shade700 : kPrimaryColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: EdgeInsets.all(20),
         duration: Duration(seconds: 3),
       ),
     );
@@ -576,7 +657,6 @@ class _SchedulePickupState extends State<SchedulePickup> {
       List<String> categoryNamesInvolved = _selectedItems.map((item) => item.categoryName).toSet().toList();
 
       if (_isEditMode) {
-        // --- UPDATE Existing Pickup ---
         final pickupRef = FirebaseFirestore.instance.collection('pickups').doc(widget.pickupId!);
         final updateData = {
           'scrapItems': itemsForFirestore,
@@ -590,12 +670,28 @@ class _SchedulePickupState extends State<SchedulePickup> {
         _showSnackBar("Pickup updated successfully!");
 
       } else {
-        // --- ADD New Pickup ---
         final pickupDate = DateTime.parse(dateController.text);
         final addressData = _selectedAddress!.data() as Map<String, dynamic>;
+        final userDoc =
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+final userData =
+    userDoc.data() ?? {};
+
+final customerName =
+    userData['name'] ?? '';
+
+final customerPhone =
+    userData['phone'] ?? '';
 
         await FirebaseFirestore.instance.collection('pickups').add({
           'userId': user.uid,
+          'customerName': customerName,
+
+'customerPhone': customerPhone,
           'addressId': _selectedAddress!.id,
           'addressDetails': addressData,
           'pickupDate': Timestamp.fromDate(pickupDate),
@@ -611,28 +707,22 @@ class _SchedulePickupState extends State<SchedulePickup> {
         _showSnackBar("Pickup scheduled successfully!");
       }
 
-      // ✅ 2. MODIFIED Success Navigation
       if (mounted) {
         if (widget.isTab) {
-          // If we are in a tab, call the callback to switch pages
           widget.onPickupScheduled?.call();
-          // Also, clear the form for the next use
           _clearForm();
         } else {
-          // If we were "pushed" (e.g., Edit), just pop the page
           Navigator.pop(context);
         }
       }
 
     } catch (e) {
       _showSnackBar("Failed to ${_isEditMode ? 'update' : 'schedule'} pickup: $e", isError: true);
-      print("Submit Error: $e");
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  // ✅ 3. ADDED clear form helper
   void _clearForm() {
     setState(() {
       _descriptionController.clear();
@@ -640,49 +730,44 @@ class _SchedulePickupState extends State<SchedulePickup> {
       _selectedTimeSlot = null;
       dateController.clear();
       _selectedItems.clear();
-      _updateTotals(); // Resets totals to 0
+      _updateTotals();
     });
   }
 
-
-  Widget _buildSection(
-      {required IconData icon,
-        required String title,
-        required Widget child}) {
-    // ... (_buildSection implementation - no changes) ...
+  Widget _buildSection({required IconData icon, required String title, required Widget child}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              blurRadius: 15,
+              offset: Offset(0, 5),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 15),
+                padding: const EdgeInsets.only(bottom: 15),
                 child: Row(
                   children: [
-                    Icon(icon, color: kPrimaryColor),
-                    SizedBox(width: 10),
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: kCreamColor, borderRadius: BorderRadius.circular(8)),
+                      child: Icon(icon, color: kPrimaryColor, size: 22),
+                    ),
+                    SizedBox(width: 12),
                     Text(
                       title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: kPrimaryColor,
-                      ),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor),
                     ),
                   ],
                 ),
@@ -696,7 +781,6 @@ class _SchedulePickupState extends State<SchedulePickup> {
   }
 
   Future<void> _navigateAndRefresh(BuildContext context) async {
-    // ... (_navigateAndRefresh implementation - no changes) ...
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ManageAddressesPage()),
@@ -709,7 +793,6 @@ class _SchedulePickupState extends State<SchedulePickup> {
   }
 
   Future<void> _selectDate() async {
-    // ... (_selectDate implementation - no changes) ...
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -718,223 +801,117 @@ class _SchedulePickupState extends State<SchedulePickup> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: kPrimaryColor,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
+            colorScheme: ColorScheme.light(primary: kPrimaryColor, onPrimary: Colors.white, onSurface: Colors.black),
           ),
           child: child!,
         );
       },
     );
     if (pickedDate != null) {
-      setState(() {
-        dateController.text = pickedDate.toLocal().toString().split(" ")[0];
-      });
-    }
+
+  setState(() {
+
+    selectedPickupDate =
+        pickedDate;
+         dateController.text =
+        DateFormat(
+          'yyyy-MM-dd',
+        ).format(
+          pickedDate,
+        );
+  });
+}
   }
 
-  // ✅ 4. EXTRACTED AppBar
   AppBar _buildAppBar() {
     return AppBar(
       centerTitle: true,
       title: Text(
         _isEditMode ? 'Edit Pickup' : 'Schedule Pickup',
-        style: TextStyle(
-          fontFamily: 'RedHatDisplay',
-          fontWeight: FontWeight.bold,
-          fontSize: 24,
-          letterSpacing: 1.0,
-          color: kCreamColor,
-        ),
+        style: TextStyle(fontFamily: 'RedHatDisplay', fontWeight: FontWeight.bold, fontSize: 24, letterSpacing: 1.0, color: kCreamColor),
       ),
       backgroundColor: kPrimaryColor,
       leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-        ),
-        onPressed: () {
-          Navigator.pop(context);
-        },
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
     );
   }
 
-  // ✅ 5. EXTRACTED Body
   Widget _buildBody() {
     final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
     final List<String> categoryIds = _availableCategories.keys.toList();
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(top: 100.0),
       child: Column(
         children: [
-          // ==== Pickup Location Section ====
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+          // ==== Pickup Location ====
+          _buildSection(
+            icon: Icons.location_on,
+            title: "pickup_location".tr(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AbsorbPointer(
+                  absorbing: _isEditMode,
+                  child: Opacity(
+                    opacity: _isEditMode ? 0.6 : 1.0,
+                    child: _isLoadingAddresses
+                        ? Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<DocumentSnapshot>(
+                      value: _selectedAddress,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                        hintText: 'Select Address',
+                      ),
+                      items: _addresses.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DropdownMenuItem<DocumentSnapshot>(
+                          value: doc,
+                          child: Text('${data['addressType']}: ${data['line1']}', overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _selectedAddress = value),
+                    ),
+                  ),
+                ),
+                if (!_isEditMode) ...[
+                  SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          await Navigator.push(context, MaterialPageRoute(builder: (context) => AddAddress()));
+                          setState(() { _selectedAddress = null; _isLoadingAddresses = true; });
+                          _fetchAddresses();
+                        },
+                        icon: Icon(Icons.add, size: 18),
+                        label: Text('Add New', style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: TextButton.styleFrom(foregroundColor: kPrimaryColor),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _navigateAndRefresh(context),
+                        icon: Icon(Icons.settings, size: 18),
+                        label: Text('Manage', style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: TextButton.styleFrom(foregroundColor: Colors.grey.shade700),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Stack(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // --- Section Header ---
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 15),
-                          child: Row(
-                            children: [
-                              Icon(Icons.location_on, color: kPrimaryColor),
-                              SizedBox(width: 10),
-                              Text(
-                                "Pickup Location",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: kPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // --- Dropdown Field ---
-                        AbsorbPointer(
-                          absorbing: _isEditMode,
-                          child: Opacity(
-                            opacity: _isEditMode ? 0.6 : 1.0,
-                            child: _isLoadingAddresses
-                                ? Center(child: CircularProgressIndicator())
-                                : _addresses.isEmpty
-                                ? Container(
-                              /*... No addresses found ...*/
-                            ) // Handle this case
-                                : DropdownButtonFormField<DocumentSnapshot>(
-                              value: _selectedAddress,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding:
-                                EdgeInsets.symmetric(horizontal: 10),
-                                hintText: 'Select Address',
-                                helperText: _isEditMode
-                                    ? 'Address cannot be changed during edit'
-                                    : null,
-                                helperStyle: _isEditMode
-                                    ? TextStyle(color: Colors.grey.shade600)
-                                    : null,
-                              ),
-                              items: _addresses.map((doc) {
-                                final data =
-                                doc.data() as Map<String, dynamic>;
-                                return DropdownMenuItem<DocumentSnapshot>(
-                                  value: doc,
-                                  child: Text(
-                                    '${data['addressType']}: ${data['line1']}',
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedAddress = value;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        // --- Buttons Row (Add and Manage) ---
-                        if (!_isEditMode)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              GestureDetector(
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AddAddress(),
-                                    ),
-                                  );
-                                  setState(() {
-                                    _selectedAddress = null;
-                                    _isLoadingAddresses = true;
-                                  });
-                                  _fetchAddresses();
-                                },
-                                child: Text(
-                                  '+ Add New Address',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: kPrimaryColor),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  _navigateAndRefresh(context);
-                                },
-                                child: Text(
-                                  'Manage Addresses',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: kPrimaryColor),
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                    // --- Positioned Clear Button ---
-                    if (!_isEditMode)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (_selectedAddress != null) {
-                              setState(() {
-                                _selectedAddress = null;
-                              });
-                            }
-                          },
-                          child: Text(
-                            'Clear',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _selectedAddress != null
-                                  ? Colors.red.shade700
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
 
-          // ==== Date & Time Section ====
+          // ==== Date & Time ====
           _buildSection(
             icon: Icons.calendar_month,
-            title: "Date & Time",
+            title: "date_time".tr(),
             child: AbsorbPointer(
               absorbing: _isEditMode,
               child: Opacity(
@@ -946,14 +923,10 @@ class _SchedulePickupState extends State<SchedulePickup> {
                         controller: dateController,
                         decoration: InputDecoration(
                           labelText: "Select Date",
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.calendar_today),
-                          helperText: _isEditMode
-                              ? 'Date cannot be changed during edit'
-                              : null,
-                          helperStyle: _isEditMode
-                              ? TextStyle(color: Colors.grey.shade600)
-                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          suffixIcon: Icon(Icons.calendar_today, color: kPrimaryColor),
                         ),
                         readOnly: true,
                         onTap: _isEditMode ? null : _selectDate,
@@ -966,15 +939,10 @@ class _SchedulePickupState extends State<SchedulePickup> {
                         controller: TextEditingController(text: _selectedTimeSlot),
                         decoration: InputDecoration(
                           labelText: "Select Time",
-                          hintText: "Time Slot",
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.access_time_filled),
-                          helperText: _isEditMode
-                              ? 'Time cannot be changed during edit'
-                              : null,
-                          helperStyle: _isEditMode
-                              ? TextStyle(color: Colors.grey.shade600)
-                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          suffixIcon: Icon(Icons.access_time_filled, color: kPrimaryColor),
                         ),
                         onTap: _isEditMode ? null : () => showCustomPopup(context),
                       ),
@@ -985,287 +953,236 @@ class _SchedulePickupState extends State<SchedulePickup> {
             ),
           ),
 
-          // ==== Add Scrap Items Section ====
+          // ==== Scrap Items ====
           _buildSection(
             icon: Icons.recycling,
-            title: _isEditMode ? "Edit Scrap Items" : "Add Scrap Items",
+            title: "select_scraps".tr(),
             child: _isLoadingPrices
                 ? Center(child: CircularProgressIndicator())
-                : _availableCategories.isEmpty
-                ? Text("No scrap types found in database.")
                 : Wrap(
               spacing: 10,
-              runSpacing: 5,
+              runSpacing: 10,
               children: categoryIds.map((categoryId) {
-                final categoryName =
-                    _availableCategories[categoryId]?['name'] ??
-                        'Unknown';
-                bool categoryHasSelection = _selectedItems.any(
-                        (item) => item.categoryId == categoryId);
+                String categoryName =
+_availableCategories[categoryId]?['name']
+?? 'Unknown';
 
+switch (categoryName) {
+
+  case 'Plastic':
+    categoryName =
+        'plastic'.tr();
+    break;
+
+  case 'Paper':
+    categoryName =
+        'paper'.tr();
+    break;
+
+  case 'Glass':
+    categoryName =
+        'glass'.tr();
+    break;
+
+  case 'Metals':
+    categoryName =
+        'metals'.tr();
+    break;
+
+  case 'E-waste':
+    categoryName =
+        'ewaste'.tr();
+    break;
+}
+                bool categoryHasSelection = _selectedItems.any((item) => item.categoryId == categoryId);
                 return ChoiceChip(
                   label: Text(categoryName),
                   labelStyle: TextStyle(
-                    color: categoryHasSelection
-                        ? Colors.white
-                        : Colors.black,
-                    fontWeight: categoryHasSelection
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    color: categoryHasSelection ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
                   ),
                   selected: categoryHasSelection,
                   selectedColor: kPrimaryColor,
-                  backgroundColor: Colors.grey.shade200,
-                  onSelected: (bool _) {
-                    _showItemSelectionPopup(context, categoryId);
-                  },
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(color: categoryHasSelection ? kPrimaryColor : Colors.grey.shade300)
+                  ),
+                  onSelected: (bool _) => _showItemSelectionPopup(context, categoryId),
                 );
               }).toList(),
             ),
           ),
 
-          // ==== Pickup Summary Section ====
+          // ==== Pickup Summary ====
           _buildSection(
             icon: Icons.receipt_long,
-            title: "Pickup Summary",
+            title: "pickup_summary".tr(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Address ---
                 if (_selectedAddress != null) ...[
-                  Text("Address:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Row(children: [Icon(Icons.place, size: 16, color: Colors.grey), SizedBox(width: 5), Text("Address", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))]),
                   Padding(
-                    padding: const EdgeInsets.only(top: 2.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${(_selectedAddress!.data() as Map<String, dynamic>)['line1'] ?? ''}',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          '${(_selectedAddress!.data() as Map<String, dynamic>)['fullAddress'] ?? ''}',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.only(left: 21.0, top: 4, bottom: 12),
+                    child: Text('${(_selectedAddress!.data() as Map<String, dynamic>)['line1'] ?? ''}', style: TextStyle(fontWeight: FontWeight.w500)),
                   ),
-                  SizedBox(height: 10),
-                ],
-                // --- Date & Time ---
-                if (dateController.text.isNotEmpty ||
-                    _selectedTimeSlot != null) ...[
-                  Text("Date & Time:",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  if (dateController.text.isNotEmpty)
-                    Text('Date: ${dateController.text}',
-                        style: TextStyle(fontSize: 14)),
-                  if (_selectedTimeSlot != null)
-                    Text('Slot: $_selectedTimeSlot',
-                        style: TextStyle(fontSize: 14)),
-                  SizedBox(height: 10),
                 ],
 
-                // --- Items Header ---
-                Text("Items:", style: TextStyle(fontWeight: FontWeight.bold)),
                 if (_selectedItems.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'No items added yet. Tap a category above to add items.',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  )
+                  Center(child: Padding(padding: const EdgeInsets.all(20.0), child: Text('No items added yet.', style: TextStyle(color: Colors.grey.shade500))))
                 else
-
-                // --- Items List ---
                   ..._selectedItems.map((item) {
                     return Container(
-                      margin: EdgeInsets.zero,
-                      padding: EdgeInsets.zero,
+                      margin: EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200)
+                      ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Item Name (Expanded)
                           Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8.0, top: 4.0, bottom: 4.0),
-                              child: Text(
-                                '${item.categoryName} - ${item.itemName} (${item.displayAmount} ${item.unit})',
-                                style: TextStyle(fontSize: 14, height: 1.3),
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${item.categoryName} - ${item.itemName}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                Text('${item.displayAmount} ${item.unit}  •  ${currencyFormatter.format(item.calculatedCost)}', style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.w600)),
+                              ],
                             ),
                           ),
-
-                          // Group Price and Delete Button
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Item Cost
-                              Padding(
-                                padding: const EdgeInsets.only(top: 0),
-                                child: Text(
-                                    currencyFormatter.format(item.calculatedCost),
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        height: 1.3)),
-                              ),
-
-                              // Delete Button
-                              const SizedBox(width: 4),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedItems.removeWhere(
-                                            (i) => i.itemId == item.itemId);
-                                  });
-                                  _updateTotals();
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Icon(
-                                    Icons.close,
-                                    color: Colors.red.shade700,
-                                    size: 20,
-                                  ),
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ],
+                          // ✅ CEVUS: Soft Delete Button
+                          InkWell(
+                            onTap: () { setState(() { _selectedItems.removeWhere((i) => i.itemId == item.itemId); }); _updateTotals(); },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                              child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                            ),
                           ),
                         ],
                       ),
                     );
                   }).toList(),
 
-                // --- Divider and Totals ---
                 if (_selectedItems.isNotEmpty) ...[
-                  Divider(height: 20, thickness: 1),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total Estimated Weight (kg):',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold)),
-                      Text('${_totalEstimatedWeight.toStringAsFixed(1)} kg',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total Estimated Value:',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text(
-                        currencyFormatter.format(_totalEstimatedCost),
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: kPrimaryColor),
-                      ),
-                    ],
-                  ),
+                  Divider(height: 30),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Estimated Weight:', style: TextStyle(color: Colors.grey[600])), Text('${_totalEstimatedWeight.toStringAsFixed(1)} kg', style: TextStyle(fontWeight: FontWeight.bold))]),
+                  SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Estimated Value:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryColor)), Text(currencyFormatter.format(_totalEstimatedCost), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kAccentColor))]),
                 ],
               ],
             ),
           ),
 
-          // ==== Description Section ====
+          // ==== Description ====
           _buildSection(
-            icon: Icons.description,
-            title: "Add/Edit Description (Optional)",
+            icon: Icons.edit_note,
+            title: "description_optional".tr(),
             child: TextField(
               controller: _descriptionController,
               maxLines: 2,
               decoration: InputDecoration(
-                hintText: 'e.g., "Mainly cardboard boxes and plastic bottles"',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(10),
+                hintText: 'Any special instructions...',
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ),
+         Padding(
+
+  padding: const EdgeInsets.symmetric(
+    horizontal: 20,
+    vertical: 10,
+  ),
+
+  child: Container(
+
+    padding: const EdgeInsets.all(14),
+
+    decoration: BoxDecoration(
+
+      color: Colors.orange.withAlpha(15),
+
+      borderRadius:
+          BorderRadius.circular(16),
+
+      border: Border.all(
+        color:
+            Colors.orange.withAlpha(40),
+      ),
+    ),
+
+    child: Row(
+
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+      children: [
+
+        const Icon(
+          Icons.info_outline_rounded,
+          color: Colors.orange,
+          size: 20,
+        ),
+
+        const SizedBox(width: 10),
+
+       Expanded(
+
+  child: Text(
+
+    "estimated_cost_note".tr(),
+
+    style: TextStyle(
+      fontSize: 12,
+      height: 1.5,
+      color: Colors.orange.shade900,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+),
+      ],
+    ),
+  ),
+),
 
           // ==== Submit Button ====
           Padding(
-            padding: const EdgeInsets.all(20),
-            child: GestureDetector(
-              onTap: _isSubmitting ? null : _submitPickup,
-              child: Container(
-                height: 60,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: kAccentColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: _isSubmitting
-                      ? CircularProgressIndicator(
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(kPrimaryColor),
-                  )
-                      : Text(
-                    _isEditMode ? 'Update Pickup' : 'Submit Pickup',
-                    style: TextStyle(
-                      fontFamily: 'RedHatDisplay',
-                      fontWeight: FontWeight.bold,
-                      color: kPrimaryColor,
-                      fontSize: 25,
-                    ),
-                  ),
-                ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitPickup,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kAccentColor,
+                foregroundColor: kPrimaryColor,
+                minimumSize: Size(double.infinity, 60),
+                elevation: 5,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
+              child: _isSubmitting
+                  ? CircularProgressIndicator(color: kPrimaryColor)
+                  : Text(_isEditMode ? 'Update Pickup' : 'Schedule Pickup', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
           ),
-          SizedBox(height: 40)
+
+          // ✅ CEVUS: Bottom Padding for Nav Bar
+          SizedBox(height: 120),
         ],
       ),
     );
   }
 
-  // ✅ 6. MODIFIED MAIN BUILD METHOD
   @override
   Widget build(BuildContext context) {
-    // Show loading UI based on edit mode
     if (_isLoadingPickupData) {
-      if (widget.isTab) {
-        // Tab loading state
-        return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
-      } else {
-        // Pushed page loading state
-        return Scaffold(
-          backgroundColor: kCreamColor,
-          appBar: _buildAppBar(),
-          body: const Center(child: CircularProgressIndicator(color: kPrimaryColor)),
-        );
-      }
+      if (widget.isTab) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
+      return Scaffold(backgroundColor: kCreamColor, appBar: _buildAppBar(), body: const Center(child: CircularProgressIndicator(color: kPrimaryColor)));
     }
-
-    // Build the main body content once
     final bodyContent = _buildBody();
-
-    if (widget.isTab) {
-      // If in a tab, return just the body
-      return bodyContent;
-    } else {
-      // If pushed, return a full Scaffold
-      return Scaffold(
-        backgroundColor: kCreamColor,
-        appBar: _buildAppBar(),
-        body: bodyContent,
-      );
-    }
+    if (widget.isTab) return bodyContent;
+    return Scaffold(backgroundColor: kCreamColor, appBar: _buildAppBar(), body: bodyContent);
   }
 }

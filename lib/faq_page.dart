@@ -5,99 +5,140 @@ const kPrimaryColor = Color(0xFF013D5A);
 const kCreamColor = Color(0xFFFCF3E3);
 const kAccentColor = Color(0xFFA6CB4E);
 
-class FaqPage extends StatelessWidget {
+class FaqPage extends StatefulWidget {
   const FaqPage({super.key});
 
-  // Helper for consistent ExpansionTile styling
-  Widget _buildFaqTile(String question, String answer) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      clipBehavior: Clip.antiAlias, // Ensures content respects border radius
-      child: ExpansionTile(
-        iconColor: kPrimaryColor,
-        collapsedIconColor: Colors.grey.shade700,
-        title: Text(
-          question,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600, // Semi-bold for question
-            color: kPrimaryColor,
-          ),
-        ),
-        childrenPadding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            answer,
-            style: TextStyle(
-              fontSize: 15,
-              height: 1.4,
-              color: Colors.grey.shade800,
-            ),
-            textAlign: TextAlign.justify,
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  State<FaqPage> createState() => _FaqPageState();
+}
+
+class _FaqPageState extends State<FaqPage> {
+  // ✅ CEVUS: Data separated from UI.
+  // These are sensible questions for a user who is ALREADY logged in.
+  final List<Map<String, String>> _faqs = [
+    {
+      "question": "How are scrap prices decided?",
+      "answer": "Our prices are updated daily based on the current market rates for recyclable materials. You can check the 'Price List' section on the Home page for the latest rates per kilogram."
+    },
+    {
+      "question": "When do I get paid?",
+      "answer": "Payments are processed instantly after the pickup is completed and the final weight is verified by our agent. You can choose to receive payment via UPI, Bank Transfer, or Cash."
+    },
+    {
+      "question": "Can I reschedule or cancel a pickup?",
+      "answer": "Yes. Use the 'Pickup Tracker' or History page to 'Edit' or 'Cancel' your request. Note: Cancellations are restricted once an agent is 'Out for Pickup' to avoid logistics waste. If you cancel early, there are zero penalties."
+    },
+    {
+      "question": "Is there a minimum weight requirement?",
+      "answer": "To make the pickup efficient, we recommend a minimum of 10kg of mixed scrap. However, for smaller quantities, you can combine multiple categories (Paper, Plastic, Metal) to reach a viable amount."
+    },
+    {
+      "question": "What happens to my recycled items?",
+      "answer": "We collect, sort, and send materials directly to certified recycling plants. Your paper becomes new cardboard, plastic bottles become polyester fiber, and metals are melted down for reuse. Zero waste to landfill is our goal!"
+    },
+    {
+      "question": "My pickup agent hasn't arrived yet.",
+      "answer": "Agents may be delayed due to traffic or heavy loads from previous stops. Please check the 'Pickup Tracker' status. If it's significantly delayed, you can contact Support directly via the 'Help & Support' page."
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kCreamColor,
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text(
-          'FAQs',
-          style: TextStyle(
-            fontFamily: 'RedHatDisplay',
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            letterSpacing: 1.0,
-            color: kCreamColor,
+      // Premium Curved AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: AppBar(
+          centerTitle: true,
+          toolbarHeight: 70,
+          title: const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              'FAQs',
+              style: TextStyle(
+                fontFamily: 'RedHatDisplay',
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                letterSpacing: 1.0,
+                color: kCreamColor,
+              ),
+            ),
+          ),
+          backgroundColor: kPrimaryColor,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(30),
+            ),
           ),
         ),
-        backgroundColor: kPrimaryColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kCreamColor),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+        itemCount: _faqs.length,
+        itemBuilder: (context, index) {
+          final faq = _faqs[index];
+          return _buildFaqTile(faq['question']!, faq['answer']!);
+        },
+      ),
+    );
+  }
+
+  // Refined Tile Styling
+  Widget _buildFaqTile(String question, String answer) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        // Remove the default divider lines from ExpansionTile
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          iconColor: kAccentColor,
+          collapsedIconColor: Colors.grey.shade400,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          title: Text(
+            question,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: kPrimaryColor,
+              height: 1.3,
+            ),
+          ),
           children: [
-            _buildFaqTile(
-              "What do we do?",
-              // ⭐ Updated Answer
-              "We are a recycling service that collects recyclable materials from households and businesses, sorts them, and sends them to manufacturers who can reuse them to create new products. Our goal is to reduce waste and promote sustainability.",
+            // Divider inside for clean separation
+            Divider(height: 20, color: Colors.grey.shade100),
+            Text(
+              answer,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            _buildFaqTile(
-              "Who are we?",
-              // ⭐ Updated Answer
-              "We are a team of passionate individuals dedicated to making recycling easy and accessible for everyone. Our mission is to create a sustainable future by reducing waste and promoting responsible consumption.",
-            ),
-            _buildFaqTile(
-              "How to get the App?",
-              // ⭐ Updated Answer (Combined duplicate info)
-              "We have a user-friendly app available for both Android and iOS. You can download it from the Google Play Store or Apple App Store by searching for 'Revive Eco Tech'.",
-            ),
-            _buildFaqTile(
-              "How to Register in App?",
-              // ⭐ Updated Answer
-              "After downloading and opening the app, select the 'Sign Up' option. Follow the on-screen instructions to create your account using your name, email, and phone number. Once registered, you can schedule pickups, track your recycling progress, and earn rewards.",
-            ),
-            _buildFaqTile(
-              "How to become a partner?",
-              // ⭐ Updated Answer
-              "We are always looking for partners who share our vision of sustainability. If you are a manufacturer or a business interested in collaborating with us, please reach out through the contact details provided in the 'Help & Support' section. We would love to discuss potential partnerships.",
-            ),
-            // Add more FAQs as needed using _buildFaqTile()
           ],
         ),
       ),
