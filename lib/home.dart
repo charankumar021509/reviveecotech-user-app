@@ -131,7 +131,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     errorBuilder: (context, error, stackTrace) {
 
       print("FAILED IMAGE:");
-      print(path);
+print(path);
+print(error);
 
       return Image.asset(
         'assets/images/home/15.png',

@@ -323,39 +323,59 @@ _buildSection(
 
         const SizedBox(height: 8),
 
-        Text(
-
+       Text(
   status == 'Pending'
-
       ? 'Waiting for rider confirmation.'
-
       : status == 'Confirmed'
-
           ? 'Pickup confirmed successfully.'
-
           : status == 'Out-for-Pickup'
-
               ? 'Rider is on the way.'
-
               : status == 'Estimate Sent'
-
                   ? 'Estimate sent by rider. Please review.'
-
                   : status == 'OTP Generated'
-
                       ? 'Share OTP with rider.'
-
                       : status == 'Completed'
-
                           ? 'Pickup completed successfully.'
-
                           : 'Pickup cancelled.',
-
   style: TextStyle(
     color: Colors.grey.shade700,
     height: 1.4,
   ),
-),  
+),
+
+const SizedBox(height: 16),
+
+if ((data['riderName'] ?? '').toString().isNotEmpty)
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: kAccentColor),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Assigned Rider",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: kPrimaryColor,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          "Name: ${data['riderName'] ?? ''}",
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "Contact: ${data['riderPhone'] ?? ''}",
+        ),
+      ],
+    ),
+  ),
       ],
     ),
   ),
