@@ -374,17 +374,15 @@ final pickupsSnapshot =
 double totalEarnings = 0;
 
 for (var doc in pickupsSnapshot.docs) {
-
   final data = doc.data();
 
-  totalEarnings +=
+  // Only include completed orders that are not declined
+  if (data['status'] == 'Completed' &&
+      data['declinedStatus'] != true) {
 
-      double.tryParse(
-
-        data['finalPrice']
-            .toString(),
-
-      ) ?? 0;
+    totalEarnings +=
+        (data['finalPrice'] as num?)?.toDouble() ?? 0;
+  }
 }
     if (mounted) {
 

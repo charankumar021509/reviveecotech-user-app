@@ -489,24 +489,18 @@ final activePickups =
                           const SizedBox(
                               height: 18),
 
-                          Text(
-
-                            status ==
-                                    'Out-for-Pickup'
-
-                                ? 'Rider is on the way to your location.'
-
-                                : status ==
-                                        'Confirmed'
-
-                                    ? 'Pickup confirmed successfully.'
-
-                                    : status ==
-                                            'OTP Generated'
-
-                                        ? 'OTP generated successfully.'
-
-                                        : 'Waiting for rider confirmation.',
+                             Text(
+  status == 'Out-for-Pickup'
+      ? 'Rider is on the way to your location.'
+      : status == 'Confirmed'
+          ? 'Pickup confirmed successfully.'
+          : status == 'Estimate Sent'
+              ? 'Rider has provided an estimated price. Please review it.'
+              : status == 'Declined'
+                  ? 'The estimate was declined. Waiting for a new estimate from the rider.'
+                  : status == 'OTP Generated'
+                      ? 'OTP generated successfully.'
+                      : 'Waiting for rider confirmation.',
 
                             style: TextStyle(
                               color:

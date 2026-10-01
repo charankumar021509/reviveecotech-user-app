@@ -30,7 +30,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         .collection('pickups')
         .where('userId', isEqualTo: user.uid)
     // We only fetch the "Past" statuses
-        .where('status', whereIn: ['Completed', 'Cancelled'])
+      .where(
+  'status',
+  whereIn: [
+    'Completed',
+    'Declined',
+    'Cancelled',
+  ],
+)
         .orderBy('pickupDate', descending: true) // Newest past orders first
         .snapshots();
   }
@@ -86,11 +93,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               child: Row(
                 children: [
-                  _buildFilterChip('All'),
-                  const SizedBox(width: 10),
-                  _buildFilterChip('Completed'),
-                  const SizedBox(width: 10),
-                  _buildFilterChip('Cancelled'),
+                 _buildFilterChip('All'),
+const SizedBox(width: 10),
+_buildFilterChip('Completed'),
+const SizedBox(width: 10),
+_buildFilterChip('Declined'),
                 ],
               ),
             ),
@@ -115,11 +122,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   // Apply Client-Side Filter
                   if (_selectedFilter != 'All') {
-                    docs = docs.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      return data['status'] == _selectedFilter;
-                    }).toList();
-                  }
+  docs = docs.where((doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final status = data['status']?.toString();
+
+    if (_selectedFilter == 'Completed') {
+      return status == 'Completed';
+    }
+
+    if (_selectedFilter == 'Declined') {
+      return status == 'Declined' ||
+          status == 'Cancelled' ||
+          data['declinedStatus'] == true;
+    }
+
+    return false;
+  }).toList();
+}
 
                   // --- Empty State ---
                   if (docs.isEmpty) {

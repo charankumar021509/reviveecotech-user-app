@@ -77,6 +77,9 @@ class _SchedulePickupState extends State<SchedulePickup> {
   DateTime selectedPickupDate =
     DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController
+    _contactNumberController =
+        TextEditingController();
 
   // Address State
   List<DocumentSnapshot> _addresses = [];
@@ -227,23 +230,29 @@ for (String slot in slots) {
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _isEditMode = widget.pickupId != null;
-    _fetchAddresses();
-    _fetchPriceList().then((_) {
-      if (_isEditMode && widget.pickupId != null) {
-        _loadPickupData(widget.pickupId!);
-      }
-    });
-  }
+ @override
+void initState() {
+  super.initState();
+
+  _isEditMode = widget.pickupId != null;
+
+  _fetchAddresses();
+
+  _loadUserPhone();
+
+  _fetchPriceList().then((_) {
+    if (_isEditMode && widget.pickupId != null) {
+      _loadPickupData(widget.pickupId!);
+    }
+  });
+}
 
   @override
-  void dispose() {
-    _descriptionController.dispose();
-    super.dispose();
-  }
+void dispose() {
+  _descriptionController.dispose();
+  _contactNumberController.dispose();
+  super.dispose();
+}
 
   Future<void> _fetchAddresses() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -273,6 +282,22 @@ for (String slot in slots) {
       }
     }
   }
+  Future<void> _loadUserPhone() async {
+
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) return;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .get();
+
+  if (doc.exists) {
+    _contactNumberController.text =
+        doc.data()?['phone'] ?? '';
+  }
+}
 
   Future<void> _fetchPriceList() async {
     if (mounted) setState(() => _isLoadingPrices = true);
@@ -359,6 +384,10 @@ for (String slot in slots) {
 
       _selectedTimeSlot = data['pickupTimeSlot'] as String?;
       _descriptionController.text = data['description'] ?? '';
+      _contactNumberController.text =
+    data['customerPhone']?.toString() ??
+    data['contactNumber']?.toString() ??
+    '';
 
       final List<dynamic> itemsFromDb = data['scrapItems'] ?? [];
       _selectedItems = itemsFromDb.whereType<Map<String, dynamic>>().map((itemMap) {
@@ -658,13 +687,17 @@ for (String slot in slots) {
 
       if (_isEditMode) {
         final pickupRef = FirebaseFirestore.instance.collection('pickups').doc(widget.pickupId!);
-        final updateData = {
-          'scrapItems': itemsForFirestore,
-          'scrapCategories': categoryNamesInvolved,
-          'totalEstimatedWeight_kg': _totalEstimatedWeight,
-          'estimatedCost': _totalEstimatedCost,
-          'description': _descriptionController.text.trim(),
-        };
+       final updateData = {
+  'scrapItems': itemsForFirestore,
+  'scrapCategories': categoryNamesInvolved,
+  'totalEstimatedWeight_kg': _totalEstimatedWeight,
+  'estimatedCost': _totalEstimatedCost,
+  'description': _descriptionController.text.trim(),
+
+  // ✅ Updated contact number
+  'customerPhone': _contactNumberController.text.trim(),
+  'contactNumber': _contactNumberController.text.trim(),
+};
 
         await pickupRef.update(updateData);
         _showSnackBar("Pickup updated successfully!");
@@ -691,7 +724,8 @@ final customerPhone =
           'userId': user.uid,
           'customerName': customerName,
 
-'customerPhone': customerPhone,
+'customerPhone':
+    _contactNumberController.text.trim(),
           'addressId': _selectedAddress!.id,
           'addressDetails': addressData,
           'pickupDate': Timestamp.fromDate(pickupDate),
@@ -952,6 +986,24 @@ final customerPhone =
               ),
             ),
           ),
+          // ==== Contact Number ====
+_buildSection(
+  icon: Icons.phone,
+  title: "Contact Number",
+  child: TextField(
+    controller: _contactNumberController,
+    keyboardType: TextInputType.phone,
+    decoration: InputDecoration(
+      hintText: "Enter contact number",
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+    ),
+  ),
+),
 
           // ==== Scrap Items ====
           _buildSection(

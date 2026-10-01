@@ -134,42 +134,25 @@ class _profileState extends State<profile> {
     );
   }
 Future<double> _fetchTotalEarnings() async {
-
-  final user =
-      FirebaseAuth
-          .instance
-          .currentUser;
+  final user = FirebaseAuth.instance.currentUser;
 
   if (user == null) return 0;
 
-  final snapshot =
-
-      await FirebaseFirestore.instance
-
-          .collection('pickups')
-
-          .where(
-            'userId',
-            isEqualTo: user.uid,
-          )
-
-          .get();
+  final snapshot = await FirebaseFirestore.instance
+      .collection('pickups')
+      .where('userId', isEqualTo: user.uid)
+      .get();
 
   double total = 0;
 
   for (var doc in snapshot.docs) {
+    final data = doc.data();
 
-    final data =
-        doc.data();
-
-    total +=
-
-        double.tryParse(
-
-          data['finalPrice']
-              .toString(),
-
-        ) ?? 0;
+    // Count only completed orders that are not declined
+    if (data['status'] == 'Completed' &&
+        data['declinedStatus'] != true) {
+      total += (data['finalPrice'] as num?)?.toDouble() ?? 0;
+    }
   }
 
   return total;

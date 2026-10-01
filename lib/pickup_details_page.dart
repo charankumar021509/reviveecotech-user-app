@@ -63,7 +63,12 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
   Future<void> _cancelPickup(DocumentReference pickupRef) async {
     setState(() => _isCancelling = true);
     try {
-      await pickupRef.update({'status': 'Cancelled'});
+     await pickupRef.update({
+  'status': 'Cancelled',
+  'cancelledBy': 'user',
+  'cancelledAt': FieldValue.serverTimestamp(),
+  'cancellationReason': 'User cancelled the pickup',
+});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -228,7 +233,12 @@ class _PickupDetailsPageState extends State<PickupDetailsPage> {
 
           final bool isEditableStatus = ['Pending', 'Confirmed'].contains(status);
           final bool canEdit = isEditableStatus && _canEditPickup(pickupDate, timeSlot);
-          final bool canCancel = ['Pending', 'Confirmed', 'Out-for-Pickup'].contains(status);
+          final int estimateVersion =
+    (data['estimateVersion'] as num?)?.toInt() ?? 0;
+
+final bool canCancel =
+    ['Pending', 'Confirmed', 'Out-for-Pickup'].contains(status) ||
+    (status == 'Estimate Sent' && estimateVersion >= 2);
 
           bool isOverdue = false;
           if (pickupDate != null && ['Pending', 'Confirmed', 'Out-for-Pickup'].contains(status)) {
@@ -323,7 +333,7 @@ _buildSection(
 
         const SizedBox(height: 8),
 
-       Text(
+     Text(
   status == 'Pending'
       ? 'Waiting for rider confirmation.'
       : status == 'Confirmed'
@@ -332,11 +342,13 @@ _buildSection(
               ? 'Rider is on the way.'
               : status == 'Estimate Sent'
                   ? 'Estimate sent by rider. Please review.'
-                  : status == 'OTP Generated'
-                      ? 'Share OTP with rider.'
-                      : status == 'Completed'
-                          ? 'Pickup completed successfully.'
-                          : 'Pickup cancelled.',
+                  : status == 'Declined'
+                      ? 'Estimate declined. Waiting for rider to send a new estimate.'
+                      : status == 'OTP Generated'
+                          ? 'Share OTP with rider.'
+                          : status == 'Completed'
+                              ? 'Pickup completed successfully.'
+                              : 'Pickup cancelled.',
   style: TextStyle(
     color: Colors.grey.shade700,
     height: 1.4,
@@ -369,10 +381,12 @@ if ((data['riderName'] ?? '').toString().isNotEmpty)
         Text(
           "Name: ${data['riderName'] ?? ''}",
         ),
-        const SizedBox(height: 6),
-        Text(
-          "Contact: ${data['riderPhone'] ?? ''}",
-        ),
+        if ((data['riderPhone'] ?? '').toString().trim().isNotEmpty) ...[
+  const SizedBox(height: 6),
+  Text(
+    "Contact: ${data['riderPhone']}",
+  ),
+],
       ],
     ),
   ),
@@ -502,7 +516,8 @@ if (data['estimateSent'] == true)
         const SizedBox(height: 20),
 
         /// ACCEPT / DECLINE
-        if (data['priceApproved'] != true)
+       if (status == 'Estimate Sent' &&
+    data['priceApproved'] != true)
           Row(
             children: [
 
@@ -569,24 +584,16 @@ if (data['estimateSent'] == true)
 
                   onPressed: () async {
 
-  await FirebaseFirestore
-      .instance
-      .collection('pickups')
-      .doc(widget.pickupId)
-      .update({
-
-    'priceApproved':
-        false,
-
-    'status':
-        'Declined',
-
-    'declinedStatus':
-        true,
-
-    'estimateSent':
-        false,
-  });
+  await FirebaseFirestore.instance
+    .collection('pickups')
+    .doc(widget.pickupId)
+    .update({
+  'priceApproved': false,
+  'status': 'Declined',
+  'declinedStatus': true,
+  'estimateSent': false,
+  'estimateLocked': false,
+});
 
   ScaffoldMessenger.of(
           context)

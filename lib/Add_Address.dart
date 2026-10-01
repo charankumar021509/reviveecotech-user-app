@@ -101,19 +101,31 @@ class _AddAddressState extends State<AddAddress> {
 
   // ==== Map Logic ====
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      Position position = await _determinePosition();
-      final latLng = LatLng(position.latitude, position.longitude);
+ Future<void> _getCurrentLocation() async {
+  try {
+    Position position = await _determinePosition();
 
-      googleMapController.animateCamera(CameraUpdate.newLatLngZoom(latLng, 17));
-      setState(() => _mapCenter = latLng);
-      _fetchAddressFromLatLng(latLng);
-    } catch (e) {
-      // Quietly fail or log, don't spam snackbar on init
-      print("Location Error: $e");
-    }
+    print("========== LOCATION DEBUG ==========");
+    print("Latitude: ${position.latitude}");
+    print("Longitude: ${position.longitude}");
+    print("===================================");
+
+    final latLng = LatLng(
+      position.latitude,
+      position.longitude,
+    );
+
+    googleMapController.animateCamera(
+      CameraUpdate.newLatLngZoom(latLng, 17),
+    );
+
+    setState(() => _mapCenter = latLng);
+
+    _fetchAddressFromLatLng(latLng);
+  } catch (e) {
+    print("Location Error: $e");
   }
+}
 
   Future<Position> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -126,18 +138,9 @@ class _AddAddressState extends State<AddAddress> {
     }
     return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
-
-  void _onCameraMove(CameraPosition position) {
-    _mapCenter = position.target;
-    // Reset timer
-    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-
-    // Wait 600ms after movement stops before fetching address
-    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
-      _fetchAddressFromLatLng(_mapCenter!);
-    });
-  }
-
+void _onCameraMove(CameraPosition position) {
+  _mapCenter = position.target;
+}
   Future<void> _fetchAddressFromLatLng(LatLng position) async {
     if (!mounted) return;
     setState(() {
@@ -150,17 +153,27 @@ class _AddAddressState extends State<AddAddress> {
           position.latitude, position.longitude);
 
       if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        String address = [
-          place.street,
-          place.subLocality,
-          place.locality,
-          place.postalCode,
-          place.administrativeArea
-        ].where((e) => e != null && e.isNotEmpty).toSet().join(', ');
+  Placemark place = placemarks[0];
 
-        setState(() => _sAddress = address);
-      } else {
+  print("========== PLACEMARK DEBUG ==========");
+  print("Street: ${place.street}");
+  print("SubLocality: ${place.subLocality}");
+  print("Locality: ${place.locality}");
+  print("PostalCode: ${place.postalCode}");
+  print("AdministrativeArea: ${place.administrativeArea}");
+  print("Country: ${place.country}");
+  print("====================================");
+
+  String address = [
+    place.street,
+    place.subLocality,
+    place.locality,
+    place.postalCode,
+    place.administrativeArea
+  ].where((e) => e != null && e.isNotEmpty).toSet().join(', ');
+
+  setState(() => _sAddress = address);
+} else {
         setState(() => _sAddress = "Unknown Location");
       }
     } catch (e) {
@@ -281,11 +294,9 @@ class _AddAddressState extends State<AddAddress> {
                     target: _mapCenter ?? const LatLng(20.5937, 78.9629),
                     zoom: 15,
                   ),
-                  onMapCreated: (controller) {
-                    googleMapController = controller;
-                    // ✅ Apply Custom Style
-                    googleMapController.setMapStyle(_mapStyle);
-                  },
+                 onMapCreated: (controller) {
+  googleMapController = controller;
+},
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,

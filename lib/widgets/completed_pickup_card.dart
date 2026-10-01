@@ -49,16 +49,20 @@ class CompletedPickupCard extends StatelessWidget {
         ? DateFormat('d MMM yyyy').format(pickupDate)
         : 'Date N/A';
 
-    final bool isCancelled = status == 'Cancelled';
+    final bool isDeclined = status == 'Declined';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isCancelled ? Colors.red.withOpacity(0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isCancelled ? Border.all(color: Colors.red.withOpacity(0.1)) : null,
+       color: isDeclined
+    ? Colors.red.withOpacity(0.05)
+    : Colors.white,
+
+border: isDeclined
+    ? Border.all(color: Colors.red.withOpacity(0.1))
+    : null,
         boxShadow: [
-          if (!isCancelled)
+         if (!isDeclined)
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
@@ -90,31 +94,46 @@ class CompletedPickupCard extends StatelessWidget {
             const SizedBox(width: 14),
 
             // ✅ 2. Main Details
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        dateString,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: isCancelled ? Colors.grey[700] : kPrimaryColor,
-                        ),
-                      ),
-                      if (timeSlot.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Text("•", style: TextStyle(color: Colors.grey[400])),
-                        const SizedBox(width: 6),
-                        Text(
-                          timeSlot.split('-')[0].trim(),
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ],
-                  ),
+                 Row(
+  children: [
+    Expanded(
+      child: Text(
+        dateString,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+          color: isDeclined ? Colors.red : kPrimaryColor,
+        ),
+      ),
+    ),
+
+    if (timeSlot.isNotEmpty) ...[
+      const SizedBox(width: 4),
+      Text(
+        "•",
+        style: TextStyle(color: Colors.grey[400]),
+      ),
+      const SizedBox(width: 4),
+
+      Flexible(
+        child: Text(
+          timeSlot.split('-')[0].trim(),
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ),
+    ],
+  ],
+),
                   const SizedBox(height: 4),
 
                   if (itemsString.isNotEmpty)
@@ -138,23 +157,23 @@ class CompletedPickupCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (isCancelled)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Cancelled',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                else
+               if (isDeclined)
+  Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.red.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: const Text(
+      'Declined',
+      style: TextStyle(
+        color: Colors.red,
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  )
+else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
